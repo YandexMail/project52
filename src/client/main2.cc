@@ -6,7 +6,7 @@
 
 int main (int ac, char* av[])
 {
-  // try 
+  try 
   {
     if (ac != 2)
     {
@@ -21,21 +21,12 @@ int main (int ac, char* av[])
     typedef client<io_model, message_generator> client_type;
 
     auto&& io_mod = std::make_shared<io_model> ();
-#if 1
     io_mod->create<client_type> (io_service, av[1], mgen);
-#else
-    io_model model;
-    io_service.post ([&] {
-      std::make_shared<client_type> (io_service, av[1], mgen, model)->start ();
-    });
-#endif
 
     io_service.run ();
   }
-#if 0
   catch (std::exception const& e)
   {
     std::cout << "Exception: " << e.what () << "\n";
   }
-#endif
 }
