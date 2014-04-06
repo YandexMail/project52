@@ -1,6 +1,7 @@
 #ifndef _P52_CONCURRENCY_THREAD_POOL_H_
 #define _P52_CONCURRENCY_THREAD_POOL_H_
-#include "asio.h"
+#include "../asio.h"
+#include <boost/thread.hpp>
 
 #include <utility>
 #include <memory>
@@ -10,7 +11,7 @@ class thread_pool
 {
 public:
   explicit thread_pool (std::size_t threads = 1, std::size_t reactors = 1)
-    : threads_ (threads)
+    : threads_ (threads), next_io_service_(0)
   {
     if (reactors == 0)
       throw std::runtime_error("io_service_pool size is 0");

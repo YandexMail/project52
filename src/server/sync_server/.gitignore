@@ -1,0 +1,9 @@
+CMakeCache.txt
+.project
+.cproject
+Makefile
+*.cmake
+CMakeFiles/
+.settings/
+sync_server
+
