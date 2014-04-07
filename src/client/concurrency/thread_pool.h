@@ -56,8 +56,8 @@ public:
   void post (Handler&& handler)
   {
     asio::io_service& io = get_io_service ();
-    // io.post (std::forward<Handler> (handler));
-    io.post ([handler, &io] { handler (io); });
+    io.post (std::forward<Handler> (handler));
+    // io.post ([handler, &io] { handler (io); });
   }
 
   template <class Handler>

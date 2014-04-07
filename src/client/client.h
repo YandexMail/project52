@@ -1,5 +1,5 @@
-#ifndef _P52_CLIENT_ASYNC_H_
-#define _P52_CLIENT_ASYNC_H_
+#ifndef _P52_CLIENT_H_
+#define _P52_CLIENT_H_
 #include "asio.h"
 #include <memory>
 #include <boost/thread.hpp>
@@ -70,6 +70,20 @@ private:
     else
     {
       std::cout << "Error 1: " << err.message () << "\n";
+    }
+  }
+
+  void handle_connect (boost::system::error_code const& err)
+  {
+    if (! err)
+    {
+      auto&& lck = make_lock_guard (mux_);
+      if (data_ready_) send_request ();
+      client_ready_ = true;
+    }
+    else
+    {
+      std::cout << "Error 2: " << err.message () << "\n";
     }
   }
 
@@ -173,4 +187,4 @@ private:
   unsigned int status_code_;
 };
 
-#endif // _P52_CLIENT_ASYNC_H_
+#endif // _P52_CLIENT_H_

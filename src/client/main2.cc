@@ -4,6 +4,11 @@
 #include "io/coro.h"
 #include "message_generator.h"
 
+#if !defined(IO)
+# define IO coro_strategy
+#endif
+
+
 int main (int ac, char* av[])
 {
   try 
@@ -17,7 +22,7 @@ int main (int ac, char* av[])
     asio::io_service io_service;
     message_generator mgen;
 
-    typedef coro_strategy io_model;
+    typedef IO io_model;
     typedef client<io_model, message_generator> client_type;
 
     auto&& io_mod = std::make_shared<io_model> ();
