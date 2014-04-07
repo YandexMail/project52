@@ -14,7 +14,7 @@ private:
     std::streamsize
     do_write_ (char_type const* text, std::streamsize n)
     {
-      std::cout << "   do_write_ (" << n << ");\n";
+      // std::cout << "   do_write_ (" << n << ");\n";
       boost::system::error_code ec;
       std::size_t out = write_func_ (ec, boost::asio::buffer (text, n));
       return ec ? traits_type::eof () : out;
@@ -31,9 +31,9 @@ private:
 protected:
     virtual outbuf::int_type overflow (outbuf::int_type c)
     {
-      std::cout << "overflow (" << c << ")=...\n";
+      // std::cout << "overflow (" << c << ")=...\n";
       auto rc = overflow_ (c);
-      std::cout << "overflow (" << c << ")=" << rc << "\n";
+      // std::cout << "overflow (" << c << ")=" << rc << "\n";
       return rc;
     }
 
@@ -59,16 +59,16 @@ protected:
 
     virtual int sync ()
     {
-      std::cout << "sync ()=...\n";
+      // std::cout << "sync ()=...\n";
       auto rc = sync_ ();
-      std::cout << "sync ()=" << rc <<"\n";
+      // std::cout << "sync ()=" << rc <<"\n";
       return rc;
     }
 
     int sync_ ()
     {
       std::streamsize n = ready_ ();
-      std::cout << "   sync_ (" << n << ");\n";
+      // std::cout << "   sync_ (" << n << ");\n";
       if (n)
       {
         std::streamsize out = do_write_ (pbase (), n);
@@ -86,9 +86,9 @@ protected:
     virtual std::streamsize 
     xsputn (char_type const* text, std::streamsize n)
     {
-      std::cout << "xsputn (" << n << ")=...\n";
+      // std::cout << "xsputn (" << n << ")=...\n";
       auto rc = xsputn_ (text, n);
-      std::cout << "xsputn (" << n << ")=" << rc <<"\n";
+      // std::cout << "xsputn (" << n << ")=" << rc <<"\n";
       return rc;
     }
 
