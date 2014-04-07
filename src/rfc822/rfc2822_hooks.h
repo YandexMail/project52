@@ -1,6 +1,6 @@
 #ifndef _YIMAP_RFC_RFC2822_HOOKS_H_
 #define _YIMAP_RFC_RFC2822_HOOKS_H_
-#include <rfc822/rfc2822_types.h>
+#include "rfc2822_types.h"
 
 #include <iostream>
 #include <boost/spirit/include/classic.hpp>

@@ -1,14 +1,10 @@
 #ifndef _YIMAP_RFC822_RFC2822_GRAMMAR_H_
 #define _YIMAP_RFC822_RFC2822_GRAMMAR_H_
-#include <rfc822/rfc2822_types.h>
-#include <rfc822/rfc2822_hooks.h>
+#include "rfc2822_types.h"
+#include "rfc2822_hooks.h"
 //#include <rfc822/rfc2822_rules.h>
-#include <rfc822/abnf.h>
-#include <rfc822/utils.h>
-
-#ifndef _TEST_
- #include <yplatform/service/log.h>
-#endif
+#include "abnf.h"
+#include "utils.h"
 
 #include <boost/spirit/include/classic.hpp>
 #include <boost/spirit/include/classic_dynamic.hpp>
@@ -1607,9 +1603,7 @@ struct grammar: public SP::grammar<grammar<Actions, ErrorHandler> >
 
 #if PARSER_TIMINGS
       tm::ptime end_time  (tm::microsec_clock::local_time());
-#ifndef _TEST_
-      L_(debug) << " rfc822::definition: " << to_simple_string (end_time-start_time) ;
-#endif
+      std::cout << " rfc822::definition: " << to_simple_string (end_time-start_time) << std::endl;
 #endif
     }
   };

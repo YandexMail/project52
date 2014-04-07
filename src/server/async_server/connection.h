@@ -32,7 +32,8 @@ private:
 
     /// Buffer for incoming data.
     typedef boost::asio::basic_streambuf<> streambuf;
-    streambuf buf;
+    streambuf inBuf;
+    streambuf outBuf;
 };
 
 typedef std::shared_ptr<Connection> ConnectionPtr;
