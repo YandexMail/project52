@@ -1,7 +1,7 @@
 #ifndef _YIMAP_RFC822_H_
 #define _YIMAP_RFC822_H_
 
-#include <rfc822/rfc2822_types.h>
+#include "rfc2822_types.h"
 #include <boost/range.hpp>
 
 namespace p52 { namespace rfc822 {

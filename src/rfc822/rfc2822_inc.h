@@ -1,9 +1,9 @@
 #ifndef _YIMAP_RFC822_RFC2822_H_
 #define _YIMAP_RFC822_RFC2822_H_
 
-#include <rfc822/rfc2822_types.h>
-#include <rfc822/abnf.h>
-#include <rfc822/utils.h>
+#include "rfc2822_types.h"
+#include "abnf.h"
+#include "utils.h"
 
 #include <boost/spirit/include/classic.hpp>
 #include <boost/spirit/include/phoenix1_binders.hpp>
