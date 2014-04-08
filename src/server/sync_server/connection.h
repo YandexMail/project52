@@ -5,31 +5,37 @@
 
 class Connection {
 public:
+    typedef boost::asio::ip::tcp tcp;
     Connection(boost::asio::io_service & io_service)
     : socket_(io_service) {
     }
 
-    boost::asio::ip::tcp::socket & socket() {
+    tcp::socket & socket() {
         return socket_;
     }
 
-    void start() {
-        read();
-        reply();
-    }
+    void start();
+
 private:
-    void read();
+    void writeGreeting();
+    void writeDataGreeting();
+    void writeGoodbye();
 
-    void handleRead(const boost::system::error_code& e);
+    void serve();
+    std::string getCommand();
+    bool handleCommand();
+    void readData();
+    void handleData();
 
-    void reply();
+    void reply( const std::string & str = "250 Ok\r\n");
 
-    void handleWrite(const boost::system::error_code& e);
+    void shutdown();
 
-    boost::asio::ip::tcp::socket socket_;
+    tcp::socket socket_;
     typedef boost::asio::basic_streambuf<> streambuf;
     streambuf inBuf;
     streambuf outBuf;
+    static const std::string endOfData;
 };
 
 typedef std::shared_ptr<Connection> ConnectionPtr;

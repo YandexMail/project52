@@ -22,11 +22,25 @@ public:
     void start();
 
 private:
-    /// Handle completion of a read operation.
-    void handleRead(const boost::system::error_code& e);
+    void writeGreeting();
+    void handleGreetingWrite(const boost::system::error_code& e);
 
-    /// Handle completion of a write operation.
-    void handleWrite(const boost::system::error_code& e);
+    void readCommand();
+    std::string getCommand();
+    void handleCommand(const boost::system::error_code& e);
+    void commandReply( const std::string & msg = "250 Ok\r\n");
+    void handleCommandReplyWrite(const boost::system::error_code& e);
+
+    void writeDataGreeting();
+    void handleDataGreetingWrite(const boost::system::error_code& e);
+    void readData();
+    void handleData(const boost::system::error_code& e);
+    void dataReply( const std::string & msg = "250 Ok\r\n");
+    void handleDataReply(const boost::system::error_code& e);
+
+    void writeGoodbye();
+    void handleWriteGoodbye(const boost::system::error_code& e);
+    void shutdown();
 
     tcp::socket socket_;
 
@@ -34,6 +48,7 @@ private:
     typedef boost::asio::basic_streambuf<> streambuf;
     streambuf inBuf;
     streambuf outBuf;
+    static const std::string endOfData;
 };
 
 typedef std::shared_ptr<Connection> ConnectionPtr;
