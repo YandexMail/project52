@@ -7,6 +7,7 @@
 
 #include "inbuf.h"
 #include "outbuf.h"
+#include "zerocopy/streambuf.h"
 
 using boost::asio::ip::tcp;
 
@@ -30,15 +31,21 @@ public:
         {
           try
           {
-            auto ibuf = make_inbuf_ptr ( 
+            auto ibuf = zerocopy::make_streambuf_ptr ( 
               [this, &yield] (boost::system::error_code& ec, 
-                boost::asio::mutable_buffers_1 const& buf) 
+                zerocopy::basic_streambuf_base<>::mutable_buffers_type const& buf) 
               -> std::size_t
               { 
                 timer_.expires_from_now(std::chrono::seconds(10));
                 return socket_.async_read_some (buf, yield[ec]);
               }
             );
+
+            auto first = ibuf->begin ();
+            auto last = ibuf->end ();
+
+            std::cout << 
+              boost::make_iterator_range (first, last);
 
             auto obuf = make_outbuf_ptr (
               [this, &yield] (boost::system::error_code& ec, 

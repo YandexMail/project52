@@ -2,14 +2,9 @@
 #ifndef _YAMAIL_DATA_ZEROCOPY_STREAMBUF_H_
 #define _YAMAIL_DATA_ZEROCOPY_STREAMBUF_H_
 
-#include <yamail/config.h>
-#include <yamail/data/zerocopy/namespace.h>
-
-#include <yamail/data/zerocopy/fragment.h>
-#include <yamail/data/zerocopy/segment.h>
-#include <yamail/data/zerocopy/iterator.h>
-
-#include <yamail/compat/shared_ptr.h>
+#include <zerocopy/fragment.h>
+#include <zerocopy/segment.h>
+#include <zerocopy/iterator.h>
 
 // for debug only
 #include <iostream>
@@ -27,28 +22,53 @@
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
 
+#include <boost/asio.hpp>
+
 // #define YDEBUG 1
 //
 #if defined(YDEBUG)
 #define PRINT_DEBUG(os) print_debug(os, __LINE__)
 #endif
 
-YAMAIL_FQNS_DATA_ZC_BEGIN
+namespace zerocopy {
 
 namespace asio = ::boost::asio;
 
 template <
+  typename Alloc = std::allocator<void>
+>
+struct basic_streambuf_base
+{
+  typedef typename Alloc::template rebind<asio::mutable_buffer>::
+  other mutable_buffers_allocator;
+
+  typedef std::vector<asio::mutable_buffer, mutable_buffers_allocator>
+  mutable_buffers_type;
+
+  typedef typename Alloc::template rebind<asio::const_buffer>::
+  other const_buffers_allocator;
+
+  typedef std::vector<asio::const_buffer, const_buffers_allocator>
+  const_buffers_type;
+
+};
+
+template <
+    typename ReadFunc
   // used for streambuf
-  typename CharT = char, typename Traits = std::char_traits<CharT>
+  , typename CharT = char, typename Traits = std::char_traits<CharT>
   // used for allocating IO buffers (fragments)
   , typename FragmentAlloc = std::allocator<CharT>
   // used for allocating everithing else,
   // mostly: internal containers entries, shared_ptr internals
   , typename Alloc = std::allocator<void>
   >
-class basic_streambuf: public std::basic_streambuf<CharT, Traits>,
-  boost::noncopyable
+class basic_streambuf
+  : basic_streambuf_base<Alloc>
+  , public std::basic_streambuf<CharT, Traits>
+  , boost::noncopyable
 {
+
   typedef CharT char_type;
   typedef Traits traits_type;
   typedef FragmentAlloc fragment_allocator_type;
@@ -57,7 +77,7 @@ class basic_streambuf: public std::basic_streambuf<CharT, Traits>,
   typedef std::basic_streambuf<char_type, traits_type> streambuf_type;
 
   typedef detail::basic_raii_fragment<fragment_allocator_type> fragment_type;
-  typedef compat::shared_ptr<fragment_type> fragment_ptr;
+  typedef std::shared_ptr<fragment_type> fragment_ptr;
 
   typedef typename fragment_type::const_iterator fragment_const_iterator;
 
@@ -67,7 +87,15 @@ class basic_streambuf: public std::basic_streambuf<CharT, Traits>,
   typedef std::list<fragment_ptr, fragment_list_allocator> fragment_list;
   typedef typename fragment_list::const_iterator fragment_list_const_iterator;
 
+  friend class zerocopy::iterator<
+    basic_streambuf, char_type, fragment_type, fragment_list>;
+ 
   // private vars
+
+  ReadFunc read_func_;
+  bool error_ = false;
+  bool eof_ = false;
+  boost::system::error_code error_code_;
 
   std::size_t max_size_;
 
@@ -206,6 +234,9 @@ class basic_streambuf: public std::basic_streambuf<CharT, Traits>,
     os << '\n';
     os << "TAIL=" << tail << ", TAIL_SIZE=" << tail_size() << "\n";
     assert (tail == tail_size());
+
+    os << "sizes: inter=" << inter_size () << ", tail=" << tail_size ()
+      << ", put=" << put_size () << ", total=" << total_size () << "\n";
   }
 #endif
 public:
@@ -225,7 +256,8 @@ public:
   template<typename T>
   struct iteratorT
   {
-    typedef zerocopy::iterator<T, fragment_type, fragment_list> type;
+    typedef zerocopy::iterator<
+      basic_streambuf, T, fragment_type, fragment_list> type;
   };
 
   typedef typename iteratorT<char_type>::type iterator;
@@ -243,22 +275,24 @@ public:
   }
 
   basic_streambuf (
-    std::size_t min_fragmentation = 512
-				    , std::size_t max_fragmentation = 1024 * 1024
-					, std::size_t start_fragments = 0    // defaults to 1
-					    , std::size_t start_fragment_len = 0 // defaults to fragmentation
-						, std::size_t max_size = (std::numeric_limits<std::size_t>::max)()
-						    , fragment_allocator_type const& fallocator = fragment_allocator_type()
-							, allocator_type const& allocator = allocator_type()
-  ) : size_ (0)
+      ReadFunc read_func
+    , std::size_t min_fragmentation = 16
+    , std::size_t max_fragmentation = 128
+    , std::size_t start_fragments = 0    // defaults to 1
+    , std::size_t start_fragment_len = 0 // defaults to fragmentation
+    , std::size_t max_size = (std::numeric_limits<std::size_t>::max)()
+    , fragment_allocator_type const& fallocator = fragment_allocator_type()
+    , allocator_type const& allocator = allocator_type()
+  ) : read_func_ (std::move (read_func))
+    , size_ (0)
     , inter_size_ (0)
     , tail_size_ (0)
     , total_size_ (0)
-    , min_fragmentation_ (min_fragmentation ? min_fragmentation : 512)
+    , min_fragmentation_ (min_fragmentation ? min_fragmentation : 16)
     , max_fragmentation_ (
       std::max (min_fragmentation_, max_fragmentation
 		? max_fragmentation
-		: std::max<std::size_t> (min_fragmentation_, 1024 * 1024))
+		: std::max<std::size_t> (min_fragmentation_, 128))
     )
     , fallocator_ (fallocator)
     , allocator_ (allocator)
@@ -286,7 +320,7 @@ public:
     while (start_fragments--)
     {
       fragments_.push_back (
-	boost::allocate_shared<fragment_type> (af,
+	std::allocate_shared<fragment_type> (af,
 	    start_fragment_len, fallocator_)
       );
       tail_size_ += start_fragment_len;
@@ -311,19 +345,20 @@ public:
   }
 
   template<typename T>
-  typename iteratorT<T>::type beginT() const
+  typename iteratorT<T>::type beginT()
   {
     assert (!fragments_.empty());
-    return typename iteratorT<T>::type (fragments_, this->gptr());
+    return typename iteratorT<T>::type (*this, fragments_, this->gptr());
   }
 
   template<typename T>
   typename iteratorT<T>::type endT() const
   {
-    return typename iteratorT<T>::type (fragments_, this->pptr(), true);
+    // return typename iteratorT<T>::type (*this, fragments_, this->pptr(), true);
+    return typename iteratorT<T>::type ();
   }
 
-  iterator begin() const
+  iterator begin()
   {
     return beginT<char_type>();
   }
@@ -445,7 +480,7 @@ public:
   std::size_t size() const
   {
 #if defined(YDEBUG)
-    std::cerr << "SIZE () = "
+    std::cerr << "input area SIZE () = "
 	      << inter_size() << " + " <<
 	      (this->egptr() - this->gptr()) << " + " <<
 	      (this->pptr() - this->pbase()) << "\n";
@@ -624,6 +659,18 @@ public:
 		<< "\n";
 #endif
       promote_put_if_exist();
+#if defined(YDEBUG)
+      size();
+      PRINT_DEBUG (std::cerr);
+#endif
+#if defined(YDEBUG)
+    std::cerr << "COMMIT (): get ptrs:  "
+	      << (void*) this->eback() << ", "
+	      << (void*) this->gptr() << ", "
+	      << (void*) this->egptr()
+	      << "\n";
+#endif
+
       return;
     }
 
@@ -673,6 +720,31 @@ public:
   }
 
 protected:
+  std::size_t prefered_read_size () const
+  {
+    return put_size () < min_fragmentation_ ? 2*max_fragmentation_ : put_size ();
+    // return 512;
+    // return (min_fragmentation_ + max_fragmentation_) / 2;
+  }
+
+  std::size_t fetch_data ()
+  {
+    mutable_buffers_type bufs = prepare (prefered_read_size ());
+
+    boost::system::error_code ec;
+    std::size_t n = read_func_ (ec, bufs);
+
+    if (ec) {
+      if (asio::error::eof == ec) eof_ = true;
+      else error_ = true;
+      error_code_ = ec;
+      return -1;
+    }
+
+    if (n>0) commit (n);
+    return n;
+  }
+
   void promote_put_if_exist()
   {
     if (this->epptr() > this->pptr()
@@ -725,7 +797,7 @@ protected:
 		needed_size << " bytes, will allocate " << sz << "\n";
 #endif
       // add created fragment to list
-      fragments_.push_back (boost::allocate_shared<fragment_type> (af, sz,
+      fragments_.push_back (std::allocate_shared<fragment_type> (af, sz,
 			    fallocator_));
       // increment put_size
       tail_size_ += sz;
@@ -889,7 +961,11 @@ protected:
 	      << (void*) this->gptr() << ", "
 	      << (void*) this->egptr()
 	      << "\n";
+    PRINT_DEBUG (std::cerr);
 #endif
+    // if (size () <= 0)
+    if (this->pptr() - this->pbase() <= 0)
+      fetch_data ();
 
     if (get_active() == put_active())
     {
@@ -899,9 +975,11 @@ protected:
 
       if (this->gptr() == this->pptr())
       {
-	return streambuf_type::traits_type::eof();
+#if defined(YDEBUG)
+        std::cerr << "UNDERFLOW_1 - return eof\n";
+#endif
+        return streambuf_type::traits_type::eof();
       }
-
       compact_put_area();
       extend_get_area();
     }
@@ -948,15 +1026,16 @@ protected:
 			    (*get_active())->begin(), eptr);
     }
 
-#if defined(YDEBUG)
+#if 1 // defined(YDEBUG)
     std::cerr << "UNDERFLOW () - OK: get ptrs:  "
 	      << (void*) this->eback() << ", "
 	      << (void*) this->gptr() << ", "
 	      << (void*) this->egptr()
 	      << "\n";
 #endif
-    return (this->gptr() == this->egptr()) ?
-	   streambuf_type::traits_type::eof() : *this->gptr();
+
+    return (this->gptr () == this->egptr ()) ?
+      streambuf_type::traits_type::eof () : *this->gptr ();
   }
 
   typename streambuf_type::traits_type::int_type pbackfail (
@@ -970,7 +1049,15 @@ protected:
   }
 };
 
-typedef basic_streambuf<> streambuf;
+// typedef basic_streambuf<> streambuf;
 
-YAMAIL_FQNS_DATA_ZC_END
+template <typename ReadFunc>
+std::unique_ptr<basic_streambuf<ReadFunc>>
+make_streambuf_ptr (ReadFunc&& rf)
+{
+  return std::unique_ptr<basic_streambuf<ReadFunc>> (
+    new basic_streambuf<ReadFunc> (std::forward<ReadFunc> (rf)));
+}
+
+}
 #endif // _YPLATFORM_ZEROCOPY_STREAMBUF_H_

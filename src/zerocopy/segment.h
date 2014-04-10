@@ -2,26 +2,21 @@
 #ifndef _YAMAIL_DATA_ZEROCOPY_SEGMENT_H_
 #define _YAMAIL_DATA_ZEROCOPY_SEGMENT_H_
 
-#include <yamail/config.h>
-#include <yamail/data/zerocopy/namespace.h>
-
-#include <yamail/data/zerocopy/fragment.h>
-#include <yamail/data/zerocopy/iterator.h>
-
-#include <yamail/compat/shared_ptr.h>
+#include <zerocopy/fragment.h>
+#include <zerocopy/iterator.h>
 
 #include <memory>
 #include <vector>
 #include <cstring>
 
-YAMAIL_FQNS_DATA_ZC_BEGIN
+namespace zerocopy {
 
 template< typename Alloc = std::allocator<void> >
 class basic_segment
 {
 public:
   typedef detail::basic_fragment fragment_type;
-  typedef compat::shared_ptr<fragment_type> fragment_ptr;
+  typedef std::shared_ptr<fragment_type> fragment_ptr;
   typedef typename Alloc::template rebind<fragment_ptr>::other allocator_type;
   typedef typename fragment_type::const_iterator fragment_iterator;
   typedef fragment_type::size_type size_type;
@@ -177,5 +172,5 @@ inline void swap (basic_segment<A>& x, basic_segment<A>& y)
 
 typedef basic_segment<> segment;
 
-YAMAIL_FQNS_DATA_ZC_END
+}
 #endif // _YAMAIL_DATA_ZEROCOPY_SEGMENT_H_

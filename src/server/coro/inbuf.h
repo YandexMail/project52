@@ -62,7 +62,7 @@ protected:
 
 public:
     inbuf(ReadFunc read_func) 
-      : read_func_ (read_func), buffer_()
+      : read_func_ (std::move (read_func)), buffer_()
     { 
       setg( buffer_ + 4, buffer_ + 4, buffer_ + 4); 
     }

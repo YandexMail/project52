@@ -2,32 +2,33 @@
 #ifndef _YAMAIL_DATA_ZEROCOPY_ITERATOR_H_
 #define _YAMAIL_DATA_ZEROCOPY_ITERATOR_H_
 
-#include <yamail/config.h>
-#include <yamail/data/zerocopy/namespace.h>
-
-#include <yamail/data/zerocopy/fragment.h>
-#include <yamail/compat/shared_ptr.h>
+#include <zerocopy/fragment.h>
+#include <memory>
 
 #include <boost/iterator/iterator_facade.hpp>
 
 #include <cassert>
 #include <list>
 
-YAMAIL_FQNS_DATA_ZC_BEGIN
+namespace zerocopy {
 
-template<typename Value,
-	 typename Fragment = detail::fragment,
-	 typename SegmentSeq = std::list<compat::shared_ptr<Fragment> > >
+template<
+  typename StreamBuf,
+  typename Value,
+  typename Fragment = detail::fragment,
+  typename SegmentSeq = std::list<std::shared_ptr<Fragment> > 
+>
 class iterator : public boost::iterator_facade <
-  iterator<Value, Fragment, SegmentSeq>,
+  iterator<StreamBuf, Value, Fragment, SegmentSeq>,
   Value const,
-  boost::random_access_traversal_tag
+  // boost::random_access_traversal_tag
+  boost::bidirectional_traversal_tag
   >
 {
   typedef boost::iterator_facade <
-  iterator<Value, Fragment, SegmentSeq>,
+  iterator<StreamBuf, Value, Fragment, SegmentSeq>,
 	   Value const,
-	   boost::random_access_traversal_tag
+	   boost::bidirectional_traversal_tag
 	   > iterator_facade_;
 
 protected:
@@ -35,32 +36,35 @@ protected:
   //                             of list     of shared_ptr
   typedef typename fragment_list::value_type::element_type fragment_type;
 
-  typedef compat::shared_ptr<fragment_type> fragment_ptr;
+  typedef std::shared_ptr<fragment_type> fragment_ptr;
   typedef typename fragment_list::const_iterator fragment_iterator;
 
   typedef typename fragment_type::const_iterator skip_iterator;
 
-public:
-  iterator() : fragment_list_ (0), after_last_frag_ (false) {}
+  typedef StreamBuf streambuf_type;
 
-  iterator (fragment_list const& segm_seq,
+public:
+  iterator() 
+    : streambuf_ (0), 
+      fragment_list_ (0), 
+      after_last_frag_ (false),
+      eof_ (true)
+  {}
+
+  iterator (streambuf_type& sbuf, 
+            fragment_list const& segm_seq,
 	    skip_iterator const& cur_val,
 	    bool end_iterator = false)
-    : fragment_list_ (&segm_seq),
+    : streambuf_ (&sbuf),
+      fragment_list_ (&segm_seq),
       fragment_ (frag_list().begin()),
       pos_ (cur_val),
       after_last_frag_ (frag_list().empty() || cur_val == (*fragment_)->end())
   {
-    if (end_iterator && !frag_list().empty())
-    {
-      while (! (*fragment_)->contains (pos_))
-      {
-	++fragment_;
-	assert (fragment_ != frag_list().end());
-      }
-
-      after_last_frag_ = (cur_val == (*fragment_)->end());
-    }
+#if defined(YDEBUG)
+    std::cout << "***** after_last_frag = " << after_last_frag_ << 
+      ", frag_list size=" << frag_list().size () << "\n";
+#endif
   }
 
 protected:
@@ -75,12 +79,15 @@ private:
 
   bool equal (iterator const& other) const
   {
+    if (eof_ && other.eof_) return true;
+    if (eof_ || other.eof_) return false;
+
     if (after_last_frag_ ^ other.after_last_frag_)
     {
       skip_iterator this_val = (after_last_frag_ &&
 				!is_last_fragment() ? next_pos() : pos_);
       skip_iterator other_val = (other.after_last_frag_ &&
-				 !other.is_last_fragment() ? other.next_pos() : other.pos_);
+		 !other.is_last_fragment() ? other.next_pos() : other.pos_);
       return this_val == other_val &&
 	     &frag_list() == &other.frag_list();
     }
@@ -94,6 +101,10 @@ private:
     assert (fragment_ != frag_list().end());
     assert (pos_ != (*fragment_)->end() || !is_last_fragment());
 
+#if defined(YDEBUG)
+    std::cout << "***** increment: after_last_frag = " << after_last_frag_ << 
+      ", frag_list size=" << frag_list().size () << "\n";
+#endif
     if (after_last_frag_)
     {
       assert (!is_last_fragment());
@@ -114,6 +125,17 @@ private:
 	pos_ = (*fragment_)->begin();
       }
     }
+
+    int u = 0;
+    if (fragment_ == streambuf_->put_active ()
+      && pos_ >= streambuf_->pbase ()
+      && (u=streambuf_->underflow ()) < 0)
+    {
+      std::cout << "eof_ = true\n";
+      eof_ = true;
+    }
+
+    std::cout << "underflow = " << u << "\n";
   }
 
   typename iterator_facade_::reference dereference() const
@@ -137,7 +159,7 @@ private:
     {
       assert (fragment_ == frag_list().begin());
       --fragment_;
-      pos_ == (*fragment_)->end();
+      pos_ = (*fragment_)->end();
     }
 
     --pos_;
@@ -266,15 +288,17 @@ private:
 
   template <typename> friend class basic_segment;
 
-  template <typename, typename, typename, typename>
+  template <typename, typename, typename, typename, typename>
   friend class basic_streambuf;
 
+  streambuf_type* streambuf_;
   fragment_list const* fragment_list_;
 
   fragment_iterator fragment_;
   skip_iterator pos_;
   bool after_last_frag_;
+  bool eof_ = false;
 };
 
-YAMAIL_FQNS_DATA_ZC_END
+}
 #endif // _YAMAIL_DATA_ZEROCOPY_ITERATOR_H_

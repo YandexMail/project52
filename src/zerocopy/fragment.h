@@ -2,13 +2,10 @@
 #ifndef _YAMAIL_DATA_ZEROCOPY_DETAIL_FRAGMENT_H_
 #define _YAMAIL_DATA_ZEROCOPY_DETAIL_FRAGMENT_H_
 
-#include <yamail/config.h>
-#include <yamail/data/zerocopy/namespace.h>
-
 #include <memory>
 #include <cstddef> // std::size_t
 
-YAMAIL_FQNS_DATA_ZC_BEGIN
+namespace zerocopy {
 namespace detail {
 
 class basic_fragment
@@ -130,7 +127,7 @@ public:
   }
 
 #if __cplusplus >= 201103L
-  basic_raii_fragment (basic_fragment&& x) = default;
+  basic_raii_fragment (basic_raii_fragment&& x) = default;
 
   basic_raii_fragment& operator= (basic_raii_fragment && x)
   {
@@ -174,5 +171,5 @@ typedef basic_fragment fragment;
 
 } // namespace detail
 
-YAMAIL_FQNS_DATA_ZC_END
+}
 #endif // _YAMAIL_DATA_ZEROCOPY_DETAIL_FRAGMENT_H_
