@@ -12,7 +12,8 @@ int main (int ac, char* av[])
     }
 
     asio::io_service io_service;
-    message_generator mgen;
+    message_generator::index index("mulca4fix.ammo");
+    message_generator mgen( index.begin(), index.end() );
 
     boost::asio::spawn (io_service,
         [&] (boost::asio::yield_context yield)

@@ -87,20 +87,6 @@ private:
     }
   }
 
-  void handle_connect (boost::system::error_code const& err)
-  {
-    if (! err)
-    {
-      auto&& lck = make_lock_guard (mux_);
-      if (data_ready_) send_request ();
-      client_ready_ = true;
-    }
-    else
-    {
-      std::cout << "Error 2: " << err.message () << "\n";
-    }
-  }
-
   void send_request ()
   {
     sync_->write(socket_, request_,

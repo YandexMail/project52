@@ -12,7 +12,8 @@ int main (int ac, char* av[])
     }
 
     asio::io_service io_service;
-    message_generator mgen;
+    message_generator::index index("mulca4fix.ammo");
+    message_generator mgen( index.begin(), index.end() );
     client<sync_strategy, message_generator> c (io_service, av[1], mgen);
     io_service.run ();
   }
