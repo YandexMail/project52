@@ -18,7 +18,7 @@ int main (int ac, char* av[])
     boost::asio::spawn (io_service,
         [&] (boost::asio::yield_context yield)
         {
-          coro_strategy cs (yield);
+          auto cs = std::make_shared<coro_strategy>(yield);
           client<coro_strategy, message_generator> 
             c (io_service, av[1], mgen, cs);
         }

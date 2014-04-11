@@ -16,7 +16,7 @@ class client
 public:
   client (asio::io_service& io_service, std::string const& server, 
       message_generator& mgen, 
-      std::shared_ptr<sync_strategy> const& sync)
+      std::shared_ptr<sync_strategy> const& sync = std::make_shared<sync_strategy>() )
     : sync_ (sync)
     , mgen_ (mgen)
     , server_ (server)
@@ -33,12 +33,13 @@ public:
   {
     std::shared_ptr<client> self = this->shared_from_this ();
     mgen_ ([this, self] (std::string const& from, std::string const& to, 
-          std::string const& data)
+          typename message_generator::data_type const& data)
       {
         std::ostream request_stream (&request_);
         request_stream << "MAIL FROM: <" << from << ">\r\n";
         request_stream << "RCPT TO: <" << to << ">\r\n";
         request_stream << "DATA\r\n";
+        request_stream.write(data.begin(), data.size());
         request_stream << data;
         request_stream << ".\r\n";
 

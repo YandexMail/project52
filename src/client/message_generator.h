@@ -7,6 +7,7 @@ struct message_generator
 {
   typedef p52::mbox::index<> index;
   typedef index::const_iterator iterator;
+  typedef boost::iterator_range<message_generator::iterator::value_type::second_type> data_type;
   message_generator( iterator first, iterator last )
   : i(first), first(first), last(last)
   {
@@ -16,7 +17,7 @@ struct message_generator
   template <typename Handler>
   void operator() (Handler h)
   {
-    h ("", "", std::string(i->second, i->first));
+    h ("", "", data_type(i->second, i->second + i->first));
     if( ++i == last )
       i = first;
   }

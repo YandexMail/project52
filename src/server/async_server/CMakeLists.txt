@@ -12,7 +12,7 @@ find_package(Boost
              thread 
 REQUIRED)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -stdlib=libc++")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 include_directories(${Boost_INCLUDE_DIRS})
 file(GLOB_RECURSE SOURCES "*.cc")
 

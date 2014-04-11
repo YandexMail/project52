@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
-project(sync_server)
+project(client)
 #
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
@@ -10,12 +10,18 @@ find_package(Boost
              timer 
              chrono
              thread 
+             coroutine
 REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 include_directories(${Boost_INCLUDE_DIRS})
-file(GLOB_RECURSE SOURCES "*.cc")
+include_directories(".")
 
-# Add test executable target
-add_executable(sync_server ${SOURCES})
-target_link_libraries( sync_server ${Boost_LIBRARIES} )
+add_executable(sync_client main_sync.cc)
+target_link_libraries( sync_client ${Boost_LIBRARIES} )
+
+add_executable(async_client main_async.cc)
+target_link_libraries( async_client ${Boost_LIBRARIES} )
+
+add_executable(coro_client main_coro.cc)
+target_link_libraries( coro_client ${Boost_LIBRARIES} )
