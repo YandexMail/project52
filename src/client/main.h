@@ -13,20 +13,21 @@ int main (int ac, char* av[])
 {
   try 
   {
-    if (ac != 2)
+    if (ac != 3)
     {
-      std::cout << "Usage: client <server_address>\n";
+      std::cout << "Usage: client <server_address> <port>\n";
       return 1;
     }
 
     asio::io_service io_service;
-    message_generator mgen;
+    message_generator::index index("mulca4fix.ammo");
+    message_generator mgen( index.begin(), index.end() );
 
     typedef IO io_model;
     typedef client<io_model, message_generator> client_type;
 
     auto&& io_mod = std::make_shared<io_model> ();
-    io_mod->create<client_type> (io_service, av[1], mgen);
+    io_mod->create<client_type> (io_service, av[1], av[2], mgen);
 
     io_service.run ();
   }

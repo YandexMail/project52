@@ -6,12 +6,13 @@
 
 struct sync_strategy: public std::enable_shared_from_this<sync_strategy>
 {
-  template <class Client, class Server, class MessageGenerator>
-  void create (asio::io_service& io, Server&& server, 
+  template <class Client, class Server, class Port, class MessageGenerator>
+  void create (asio::io_service& io, Server&& server, Port&& port,
       MessageGenerator&& msg_gen)
   {
     io.post ([&] {
       std::make_shared<Client> (io, std::forward<Server> (server),
+      std::forward<Port> (port),
       std::forward<MessageGenerator> (msg_gen),
       this->shared_from_this ())->start ();
     });
