@@ -15,11 +15,12 @@ class client
 
 public:
   client (asio::io_service& io_service, std::string const& server, 
-      message_generator& mgen, 
+      std::string const& port, message_generator& mgen,
       std::shared_ptr<sync_strategy> const& sync = std::make_shared<sync_strategy>() )
     : sync_ (sync)
     , mgen_ (mgen)
     , server_ (server)
+    , port_ (port)
     , resolver_ (io_service)
     , socket_ (io_service)
     , data_ready_ (false)
@@ -49,7 +50,7 @@ public:
       }
     );
 
-    tcp::resolver::query query (server_, "smtp");
+    tcp::resolver::query query (server_, port_);
 
     sync_->resolve (resolver_, query, 
         boost::bind(&client::handle_resolve, this->shared_from_this (),
@@ -160,6 +161,7 @@ private:
 
   message_generator& mgen_;
   std::string server_;
+  std::string port_;
 
   tcp::resolver resolver_;
   tcp::socket socket_;

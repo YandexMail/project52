@@ -5,9 +5,9 @@
 int main (int ac, char* av[])
 {
   try {
-    if (ac != 2)
+    if (ac != 3)
     {
-      std::cout << "Usage: async_client <server>\n";
+      std::cout << "Usage: async_client <server> <port>\n";
       return 1;
     }
 
@@ -20,7 +20,7 @@ int main (int ac, char* av[])
         {
           auto cs = std::make_shared<coro_strategy>(yield);
           client<coro_strategy, message_generator> 
-            c (io_service, av[1], mgen, cs);
+            c (io_service, av[1], av[2], mgen, cs);
         }
     );
     io_service.run ();
