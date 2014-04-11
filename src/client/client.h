@@ -49,7 +49,6 @@ public:
         data_ready_ = true;
       }
     );
-
     tcp::resolver::query query (server_, port_);
 
     sync_->resolve (resolver_, query, 
@@ -123,6 +122,7 @@ private:
       std::istream response_stream(&response_);
       unsigned int status_code; 
       response_stream >> status_code;
+      std::cout << status_code << std::endl;
       if (! response_stream)
       {
         std::cout << "Cannot parse response line.\n";
