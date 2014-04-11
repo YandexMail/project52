@@ -4,20 +4,22 @@
 #include <boost/logic/tribool.h>
 #include <boost/tuple/tuple.hpp>
 
-class request_parser 
+#include "response.h"
+
+class response_parser 
 {
 public:
-  request_parser () : state_ (init) {};
+  response_parser () : state_ (init) {};
 
   void reset () { state_ = init; }
 
   template <typename InputIterator>
   boost::tuple<boost::tribool, InputIterator>
-  parse (request& req, InputIterator begin, InputIterator end)
+  parse (response& resp, InputIterator begin, InputIterator end)
   {
     while (begin != end)
     {
-      boost::tribool result = consume (req, *begin++);
+      boost::tribool result = consume (resp, *begin++);
       if (result || !result)
         return boost::make_tuple (result, begin);
     }
@@ -28,7 +30,7 @@ public:
 
 private:
   boost::tribool 
-  consume (request& req, char input)
+  consume (response& resp, char input)
   {
     switch (state_)
     {
@@ -37,7 +39,7 @@ private:
           return false;
         else {
           state_ = digit2;
-          req.code = 100 * (input - '0');
+          resp.code = 100 * (input - '0');
           return boost::indeterminate;
         }
       case digit2:
@@ -45,7 +47,7 @@ private:
           return false;
         else {
           state_ = digit3;
-          req.code += 10 * (input - '0');
+          resp.code += 10 * (input - '0');
           return boost::indeterminate;
         }
       case digit3:
@@ -53,19 +55,19 @@ private:
           return false;
         else {
           state_ = cont;
-          req.code = 1 * (input - '0');
+          resp.code = 1 * (input - '0');
           return boost::indeterminate;
         }
       case cont:
         if (is_space (input))
         {
-          req.cont = false;
+          resp.cont = false;
           state_ = message;
           return boost::indeterminate;
         } 
         else if (is_cont (input)) 
         {
-          req.cont = true;
+          resp.cont = true;
           state_ = message;
           return boost::indeterminate;
         }
@@ -75,12 +77,12 @@ private:
         if (is_cr (input)) 
           state_ = lf;
         else
-          req.msg += input;
+          resp.msg += input;
         return boost::indeterminate;
       case lf:
-          req.msg += ' ';
+          resp.msg += ' ';
           if (is_lf (input))
-            if (req.cont)
+            if (resp.cont)
               state_ = digit1;
             else 
               return true;
