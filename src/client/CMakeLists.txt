@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.6)
 project(client)
 
-set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost 
   COMPONENTS system 
@@ -11,6 +11,7 @@ find_package(Boost
              chrono
              thread 
              coroutine
+             context
 REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
