@@ -2,7 +2,12 @@
 #define _P52_CLIENT_H_
 #include "asio.h"
 #include <memory>
+#include <array>
 #include <boost/thread.hpp>
+
+#include "response.h"
+#include "response_parser.h"
+#include "buffer.h"
 
 using asio::ip::tcp;
 
@@ -30,8 +35,14 @@ public:
   {
   }
 
+  ~client ()
+  {
+  	std::cout << "client dtor\n";
+  }
+
   void start ()
   {
+#if 0
     std::shared_ptr<client> self = this->shared_from_this ();
     mgen_ ([this, self] (std::string const& from, std::string const& to, 
           typename message_generator::data_type const& data)
@@ -49,6 +60,7 @@ public:
         data_ready_ = true;
       }
     );
+#endif
     tcp::resolver::query query (server_, port_);
 
     sync_->resolve (resolver_, query, 
@@ -56,6 +68,12 @@ public:
           asio::placeholders::error,
           asio::placeholders::iterator));
 
+  }
+
+  template <class Msg>
+  void send_message (Msg const& msg)
+  {
+  	std::cout << "send message called\n";
   }
 
 private:
@@ -78,14 +96,188 @@ private:
   {
     if (! err)
     {
-      auto&& lck = make_lock_guard (mux_);
-      if (data_ready_) send_request ();
-      client_ready_ = true;
+      std::ostream request_stream (&request_);
+      request_stream << "HELO localhost\r\n";
+
+      sync_->write(socket_, request_,
+        boost::bind(&client::handle_greeting, this->shared_from_this (),
+          asio::placeholders::error));
     }
     else
     {
       std::cout << "Error 2: " << err.message () << "\n";
     }
+  }
+
+  void handle_greeting (boost::system::error_code const& err)
+  {
+    if (! err)
+    {
+  	  auto self = this->shared_from_this ();
+     	response_parser_.reset ();
+    	parse_response ([this, self] (response const& r) { send_message (r); });
+    }
+    else
+    {
+      std::cout << "Error 2.2: " << err.message () << "\n";
+    }
+  }
+
+  void send_message (response const& r)
+  {
+    std::ostream request_stream (&request_);
+    request_stream << "MAIL FROM:<>\r\n";
+
+    sync_->write(socket_, request_,
+      boost::bind(&client::handle_message, this->shared_from_this (),
+        asio::placeholders::error));
+  }
+
+  void handle_message (boost::system::error_code const& err)
+  {
+    if (! err)
+    {
+  	  auto self = this->shared_from_this ();
+     	response_parser_.reset ();
+    	parse_response ([this, self] (response const& r) { send_message2 (r); });
+    }
+    else
+    {
+      std::cout << "Error 2.3: " << err.message () << "\n";
+    }
+  }
+
+  void send_message2 (response const& r)
+  {
+    std::ostream request_stream (&request_);
+    request_stream << "RCPT TO:<>\r\n";
+
+    sync_->write(socket_, request_,
+      boost::bind(&client::handle_message2, this->shared_from_this (),
+        asio::placeholders::error));
+  }
+
+  void handle_message2 (boost::system::error_code const& err)
+  {
+    if (! err)
+    {
+  	  auto self = this->shared_from_this ();
+     	response_parser_.reset ();
+    	parse_response ([this, self] (response const& r) { send_message3 (r); });
+    }
+    else
+    {
+      std::cout << "Error 2.4: " << err.message () << "\n";
+    }
+  }
+
+  void send_message3 (response const& r)
+  {
+    std::ostream request_stream (&request_);
+    request_stream << "DATA\r\n";
+
+    sync_->write(socket_, request_,
+      boost::bind(&client::handle_message3, this->shared_from_this (),
+        asio::placeholders::error));
+  }
+
+  void handle_message3 (boost::system::error_code const& err)
+  {
+    if (! err)
+    {
+  	  auto self = this->shared_from_this ();
+     	response_parser_.reset ();
+    	parse_response (
+    	  [this, self] (response const& r) 
+    	  { 
+    	  	mgen_ ( 
+    	  	  [&r,this] (typename message_generator::data_type const& data) 
+    	  	  { 
+    	  	  	send_message4 (r, data);
+    	  	  }); 
+    	  }
+    	);
+    }
+    else
+    {
+      std::cout << "Error 2.5: " << err.message () << "\n";
+    }
+  }
+
+  template <typename Data>
+  void send_message4 (response const& r, Data const& data)
+  {
+    sync_->write(socket_, asio::buffer (data),
+      boost::bind(&client::handle_message4, this->shared_from_this (),
+        asio::placeholders::error));
+  }
+
+  void handle_message4 (boost::system::error_code const& err)
+  {
+    if (! err)
+    {
+      std::ostream request_stream (&request_);
+      request_stream << ".\r\n";
+
+      sync_->write(socket_, request_,
+        boost::bind(&client::handle_message5, this->shared_from_this (),
+          asio::placeholders::error));
+    }
+    else
+    {
+      std::cout << "Error 2.5: " << err.message () << "\n";
+    }
+  }
+
+  void handle_message5 (boost::system::error_code const& err)
+  {
+    if (! err)
+    {
+  	  auto self = this->shared_from_this ();
+     	response_parser_.reset ();
+    	parse_response ([this, self] (response const& r) { send_message (r); });
+    }
+    else
+    {
+      std::cout << "Error 2.5: " << err.message () << "\n";
+    }
+  }
+
+  template <typename Handler>
+  void parse_response (Handler handler)
+  {
+	  auto self = this->shared_from_this ();
+
+  	sync_->read_some (socket_, asio::buffer (buffer_),
+  	  [this, self, handler] (boost::system::error_code const& ec, std::size_t bytes)
+  	  {
+  	  	if (! ec)
+        {
+        	response_parser::result_type result;
+        	std::tie (result, std::ignore) = response_parser_.parse (
+        	  resp_, buffer_.data (), buffer_.data () + bytes);
+
+        	if (result) 
+          {
+          	// std::cout << "got response\n";
+            handler (resp_);
+          }
+        	else if (! result)
+          {
+          	std::cout << "bad response\n";
+          }
+          else
+          {
+          	// std::cout << "incomplete response\n";
+          	parse_response (handler);
+          }
+        } 
+        else if (ec != asio::error::operation_aborted)
+        {
+        	// connection.manager_.stop (self);
+        }
+      }
+    );
   }
 
   void send_request ()
@@ -159,7 +351,7 @@ private:
 
   std::shared_ptr<sync_strategy> sync_;
 
-  message_generator& mgen_;
+  message_generator mgen_;
   std::string server_;
   std::string port_;
 
@@ -174,6 +366,13 @@ private:
 
   std::string response_line_;
   unsigned int status_code_;
+
+  /// Buffer for incoming data.
+  std::array<char, 8192> buffer_;
+
+
+  response resp_;
+  response_parser response_parser_;
 };
 
 #endif // _P52_CLIENT_H_

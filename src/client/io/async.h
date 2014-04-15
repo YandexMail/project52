@@ -3,6 +3,7 @@
 
 #include "asio.h"
 #include <memory>
+#include <functional>
 
 struct async_strategy: public std::enable_shared_from_this<async_strategy>
 {
@@ -43,12 +44,16 @@ struct async_strategy: public std::enable_shared_from_this<async_strategy>
   static void read_until (Socket&& socket, Buffer&& buffer, 
       Delim&& delim, Handler&& handler)
   {
-    asio::async_read_until(std::forward<Socket> (socket),
+    asio::async_read_until (std::forward<Socket> (socket),
         std::forward<Buffer> (buffer), std::forward<Delim> (delim),
         std::forward<Handler> (handler));
   }
 
-
+  template <class Socket, class Buffers, class Handler>
+  static void read_some (Socket& socket, Buffers const& buffers, Handler&& handler)
+  {
+    socket.async_read_some (buffers, std::forward<Handler> (handler));
+  }
 };
 
 #endif // _P52_IO_ASYNC_H_

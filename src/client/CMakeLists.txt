@@ -32,6 +32,7 @@ find_package(Boost
 REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
+include_directories("/Users/nikki/Work/github/yamail/include")
 include_directories(".")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -std=c++11")

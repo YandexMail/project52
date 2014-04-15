@@ -3,6 +3,7 @@
 
 #include "asio.h"
 #include <memory>
+#include <yamail/utility/capture.h>
 
 struct sync_strategy: public std::enable_shared_from_this<sync_strategy>
 {
@@ -23,17 +24,27 @@ struct sync_strategy: public std::enable_shared_from_this<sync_strategy>
   {
     boost::system::error_code ec;
     auto iterator = resolver.resolve (std::forward<Query> (query), ec);
-    std::forward<Handler> (handler) (ec, iterator);
+
+    resolver.get_io_service ().post (
+      y::utility::capture (std::forward<Handler> (handler),
+        [ec, iterator] (Handler& handler) { handler (ec, iterator); }
+      )
+    );
   }
 
   template <class Socket, class EndpointIterator, class Handler>
-  static void connect (Socket&& socket, EndpointIterator&& iter, Handler&& h)
+  static void connect (Socket&& socket, EndpointIterator&& iter, 
+      Handler&& handler)
   {
     boost::system::error_code ec;
     asio::connect (std::forward<Socket> (socket), 
         std::forward<EndpointIterator> (iter), ec);
     
-    std::forward<Handler> (h) (ec);
+    socket.get_io_service ().post (
+      y::utility::capture (std::forward<Handler> (handler),
+        [ec] (Handler& handler) { handler (ec); }
+      )
+    );
   }
 
   template <class Socket, class Buffer, class Handler>
@@ -42,7 +53,12 @@ struct sync_strategy: public std::enable_shared_from_this<sync_strategy>
     boost::system::error_code ec;
     auto bytes = asio::write (std::forward<Socket> (socket),
         std::forward<Buffer> (buffer), ec);
-    std::forward<Handler> (handler) (ec, bytes);
+
+    socket.get_io_service ().post (
+      y::utility::capture (std::forward<Handler> (handler),
+        [ec, bytes] (Handler& handler) { handler (ec, bytes); }
+      )
+    );
   }
 
   template <class Socket, class Buffer, class Delim, class Handler>
@@ -54,8 +70,26 @@ struct sync_strategy: public std::enable_shared_from_this<sync_strategy>
     auto bytes = asio::read_until(std::forward<Socket> (socket),
         std::forward<Buffer> (buffer), std::forward<Delim> (delim), ec);
 
-    std::forward<Handler> (handler) (ec, bytes);
+    socket.get_io_service ().post (
+      y::utility::capture (std::forward<Handler> (handler),
+        [ec, bytes] (Handler& handler) { handler (ec, bytes); }
+      )
+    );
   }
-};
 
+  template <class Socket, class Buffers, class Handler>
+  static void read_some (Socket& socket, Buffers const& buffers, 
+      Handler&& handler)
+  {
+    boost::system::error_code ec;
+    auto bytes = socket.read_some (buffers, ec);
+
+    socket.get_io_service ().post (
+      y::utility::capture (std::forward<Handler> (handler),
+        [ec, bytes] (Handler& handler) { handler (ec, bytes); }
+      )
+    );
+  }
+
+};
 #endif // _P52_IO_SYNC_H_
