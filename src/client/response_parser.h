@@ -4,7 +4,7 @@
 #include <boost/logic/tribool.hpp>
 #include <tuple>
 
-#include "response.h"
+#include "server_response.h"
 
 class response_parser 
 {
@@ -17,7 +17,7 @@ public:
 
   template <typename InputIterator>
   std::tuple<result_type, InputIterator>
-  parse (response& resp, InputIterator begin, InputIterator end)
+  parse (server_response& resp, InputIterator begin, InputIterator end)
   {
     while (begin != end)
     {
@@ -32,7 +32,7 @@ public:
 
 private:
 
-  result_type consume (response& resp, char input)
+  result_type consume (server_response& resp, char input)
   {
   	// std::cout << "parser: state=" << state_ << ", char=" << input << "\n";
     switch (state_)

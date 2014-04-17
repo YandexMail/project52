@@ -5,7 +5,8 @@
 #include <array>
 #include <boost/thread.hpp>
 
-#include "response.h"
+#include "smtp_msm.h"
+#include "server_response.h"
 #include "response_parser.h"
 #include "buffer.h"
 
@@ -32,6 +33,7 @@ public:
     , client_ready_ (false)
     , response_line_ ("")
     , status_code_ (0)
+    , state_machine_ (this)
   {
   }
 
@@ -42,6 +44,7 @@ public:
 
   void start ()
   {
+  	state_machine_.start ();
 #if 0
     std::shared_ptr<client> self = this->shared_from_this ();
     mgen_ ([this, self] (std::string const& from, std::string const& to, 
@@ -61,13 +64,23 @@ public:
       }
     );
 #endif
+	}
+
+	void do_resolve ()
+	{
     tcp::resolver::query query (server_, port_);
 
     sync_->resolve (resolver_, query, 
         boost::bind(&client::handle_resolve, this->shared_from_this (),
           asio::placeholders::error,
           asio::placeholders::iterator));
+  }
 
+  void do_connect (tcp::resolver::iterator endpoint_iterator)
+  {
+    sync_->connect (socket_, endpoint_iterator, 
+        boost::bind (&client::handle_connect, this->shared_from_this (), 
+          asio::placeholders::error));
   }
 
   template <class Msg>
@@ -81,31 +94,22 @@ private:
       tcp::resolver::iterator endpoint_iterator)
   {
     if (! err)
-    {
-      sync_->connect (socket_, endpoint_iterator, 
-          boost::bind (&client::handle_connect, this->shared_from_this (), 
-            asio::placeholders::error));
-    }
+      state_machine_.process_event (ev_resolved (endpoint_iterator));
     else
     {
       std::cout << "Error 1: " << err.message () << "\n";
+      state_machine_.process_event (ev_error (err));
     }
   }
 
   void handle_connect (boost::system::error_code const& err)
   {
     if (! err)
-    {
-      std::ostream request_stream (&request_);
-      request_stream << "HELO localhost\r\n";
-
-      sync_->write(socket_, request_,
-        boost::bind(&client::handle_greeting, this->shared_from_this (),
-          asio::placeholders::error));
-    }
+      state_machine_.process_event (ev_connected ());  	
     else
     {
       std::cout << "Error 2: " << err.message () << "\n";
+      state_machine_.process_event (ev_error (err));
     }
   }
 
@@ -115,7 +119,7 @@ private:
     {
   	  auto self = this->shared_from_this ();
      	response_parser_.reset ();
-    	parse_response ([this, self] (response const& r) { send_message (r); });
+    	parse_response ([this, self] (server_response const& r) { send_message (r); });
     }
     else
     {
@@ -123,7 +127,7 @@ private:
     }
   }
 
-  void send_message (response const& r)
+  void send_message (server_response const& r)
   {
     std::ostream request_stream (&request_);
     request_stream << "MAIL FROM:<>\r\n";
@@ -139,7 +143,7 @@ private:
     {
   	  auto self = this->shared_from_this ();
      	response_parser_.reset ();
-    	parse_response ([this, self] (response const& r) { send_message2 (r); });
+    	parse_response ([this, self] (server_response const& r) { send_message2 (r); });
     }
     else
     {
@@ -147,7 +151,7 @@ private:
     }
   }
 
-  void send_message2 (response const& r)
+  void send_message2 (server_response const& r)
   {
     std::ostream request_stream (&request_);
     request_stream << "RCPT TO:<>\r\n";
@@ -163,7 +167,7 @@ private:
     {
   	  auto self = this->shared_from_this ();
      	response_parser_.reset ();
-    	parse_response ([this, self] (response const& r) { send_message3 (r); });
+    	parse_response ([this, self] (server_response const& r) { send_message3 (r); });
     }
     else
     {
@@ -171,7 +175,7 @@ private:
     }
   }
 
-  void send_message3 (response const& r)
+  void send_message3 (server_response const& r)
   {
     std::ostream request_stream (&request_);
     request_stream << "DATA\r\n";
@@ -188,7 +192,7 @@ private:
   	  auto self = this->shared_from_this ();
      	response_parser_.reset ();
     	parse_response (
-    	  [this, self] (response const& r) 
+    	  [this, self] (server_response const& r) 
     	  { 
     	  	mgen_ ( 
     	  	  [&r,this] (typename message_generator::data_type const& data) 
@@ -205,7 +209,7 @@ private:
   }
 
   template <typename Data>
-  void send_message4 (response const& r, Data const& data)
+  void send_message4 (server_response const& r, Data const& data)
   {
     sync_->write(socket_, asio::buffer (data),
       boost::bind(&client::handle_message4, this->shared_from_this (),
@@ -235,7 +239,7 @@ private:
     {
   	  auto self = this->shared_from_this ();
      	response_parser_.reset ();
-    	parse_response ([this, self] (response const& r) { send_message (r); });
+    	parse_response ([this, self] (server_response const& r) { send_message (r); });
     }
     else
     {
@@ -371,8 +375,10 @@ private:
   std::array<char, 8192> buffer_;
 
 
-  response resp_;
+  server_response resp_;
   response_parser response_parser_;
+
+  smtp_msm<client> state_machine_;
 };
 
 #endif // _P52_CLIENT_H_

@@ -5,7 +5,7 @@
 #include "message_generator.h"
 
 #if !defined(IO)
-# define IO coro_strategy
+# define IO async_strategy
 #endif
 
 
