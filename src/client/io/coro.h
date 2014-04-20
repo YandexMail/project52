@@ -35,6 +35,13 @@ public:
     );
   }
 
+  template <class Socket>
+  static boost::system::error_code 
+  close (Socket& socket, boost::system::error_code& ec)
+  {
+  	return socket.close (ec);
+  }
+
   template <class Resolver, class Query, class Handler>
   void resolve (Resolver& resolver, Query&& query, Handler&& handler)
   {
