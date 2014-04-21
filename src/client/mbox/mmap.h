@@ -42,8 +42,11 @@ public:
       throw std::runtime_error ("cannot fstat mbox file");
 
     len_ = st.st_size;
-    addr_ = static_cast<char*> (::mmap (0, len_, PROT_READ, MAP_PRIVATE|MAP_FILE, fd_, 0));
-
+    void* ret = ::mmap (0, len_, PROT_READ, MAP_PRIVATE|MAP_FILE, fd_, 0);
+    if (ret == MAP_FAILED)
+      throw std::runtime_error ("cannot mmap the file");
+      
+    addr_ = static_cast<char*> (ret);
   }
 
   void close ()

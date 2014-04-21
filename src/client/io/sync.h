@@ -44,12 +44,12 @@ struct sync_strategy: public std::enable_shared_from_this<sync_strategy>
       Handler&& handler)
   {
     boost::system::error_code ec;
-    asio::connect (std::forward<Socket> (socket), 
+    auto ret = asio::connect (std::forward<Socket> (socket),
         std::forward<EndpointIterator> (iter), ec);
     
     socket.get_io_service ().post (
       y::utility::capture (std::forward<Handler> (handler),
-        [ec] (Handler& handler) { handler (ec); }
+        [ec, ret] (Handler& handler) { handler (ec, ret); }
       )
     );
   }

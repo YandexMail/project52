@@ -245,7 +245,6 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     void on_exit (Event const& e, FSM&) 
     {
     	std::cout << "leaving: Quit on " << mtypeid (e).name () << std::endl; 
-    	abort ();
     }
   };
 
@@ -279,7 +278,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     { std::cout << "leaving: Destroy" << std::endl; }
   };
 
-  typedef Initial initial_state;
+  typedef Resolve initial_state;
 
   struct adjust_sent 
   {
@@ -304,9 +303,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
 
   struct transition_table : mpl::vector<
     //
-    Row < Initial      , none          , Resolve                            >
-
-  , Row < Resolve      , ev_resolved   , Connect                            >
+    Row < Resolve      , ev_resolved   , Connect                            >
   , Row < Resolve      , ev_error      , Destroy                            >
 
   , Row < Connect      , ev_connected  , WaitHelo                           >
@@ -325,12 +322,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
   , Row < MessageSend  , ev_ready      , Quit                               >
   , Row < MessageSend  , ev_error      , Quit                               >
 
-#if 1
   , Row < Quit         , boost::any      , Close                              >
-#else
-  , Row < Quit         , ev_ready      , Close                              >
-  , Row < Quit         , ev_error      , Close                              >
-#endif
   , Row < Close        , boost::any    , Destroy                            >
   > {};
 

@@ -31,7 +31,9 @@ find_package(Boost
              context
 REQUIRED)
 
-include_directories(${Boost_INCLUDE_DIRS})
+find_package(ZLib)
+
+include_directories(${Boost_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIR})
 include_directories("/Users/nikki/Work/github/yamail/include")
 include_directories(".")
 
@@ -39,12 +41,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -std=c++11")
 
 add_executable(sync_client client.cc)
 set_target_properties (sync_client PROPERTIES COMPILE_DEFINITIONS "IO=sync_strategy")
-target_link_libraries(sync_client ${Boost_LIBRARIES} )
+target_link_libraries(sync_client ${Boost_LIBRARIES} ${ZLIB_LIBRARY})
 
 add_executable(async_client client.cc)
 set_target_properties (async_client PROPERTIES COMPILE_DEFINITIONS "IO=async_strategy")
-target_link_libraries(async_client ${Boost_LIBRARIES} )
+target_link_libraries(async_client ${Boost_LIBRARIES} ${ZLIB_LIBRARY})
 
 add_executable(coro_client client.cc)
 set_target_properties (coro_client PROPERTIES COMPILE_DEFINITIONS "IO=coro_strategy")
-target_link_libraries(coro_client ${Boost_LIBRARIES} )
+target_link_libraries(coro_client ${Boost_LIBRARIES} ${ZLIB_LIBRARY})
