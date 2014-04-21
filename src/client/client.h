@@ -166,7 +166,7 @@ private:
 	  auto self = this->shared_from_this ();
 
   	sync_->read_some (socket_, asio::buffer (buffer_),
-  	  y::utility::capture (std::forward<Handler> (handler),
+  	  y::utility::capture (
         [this, self] (Handler& handler, boost::system::error_code const& ec,
               std::size_t bytes)
         {
@@ -198,7 +198,8 @@ private:
             // connection.manager_.stop (self);
             handler (ec, resp_);
           }
-        }
+        },
+        std::forward<Handler> (handler)
       )
     );
   }

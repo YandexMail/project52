@@ -50,8 +50,9 @@ public:
         std::forward<Query> (query), (*yield_) [ec]);
 
     resolver.get_io_service ().post (
-      y::utility::capture (std::forward<Handler> (handler),
-        [ec, iterator] (Handler& handler) { handler (ec, iterator); }
+      y::utility::capture (
+        [ec, iterator] (Handler& handler) { handler (ec, iterator); },
+        std::forward<Handler> (handler)
       )
     );
   }
@@ -64,8 +65,9 @@ public:
         std::forward<EndpointIterator> (iter), (*yield_) [ec]);
 
     socket.get_io_service ().post (
-      y::utility::capture (std::forward<Handler> (handler),
-        [ec, iter2] (Handler& handler) { handler (ec, iter2); }
+      y::utility::capture (
+        [ec, iter2] (Handler& handler) { handler (ec, iter2); },
+        std::forward<Handler> (handler)
       )
     );
   }
@@ -78,8 +80,9 @@ public:
         std::forward<Buffer> (buffer), (*yield_) [ec]);
 
     socket.get_io_service ().post (
-      y::utility::capture (std::forward<Handler> (handler),
-        [ec, bytes] (Handler& handler) { handler (ec, bytes); }
+      y::utility::capture (
+        [ec, bytes] (Handler& handler) { handler (ec, bytes); },
+        std::forward<Handler> (handler)
       )
     );
   }
@@ -94,8 +97,9 @@ public:
         (*yield_) [ec]);
 
     socket.get_io_service ().post (
-      y::utility::capture (std::forward<Handler> (handler),
-        [ec, bytes] (Handler& handler) { handler (ec, bytes); }
+      y::utility::capture (
+        [ec, bytes] (Handler& handler) { handler (ec, bytes); },
+        std::forward<Handler> (handler)
       )
     );
   }
@@ -108,8 +112,9 @@ public:
     auto bytes = socket.async_read_some (buffers, (*yield_) [ec]);
 
     socket.get_io_service ().post (
-      y::utility::capture (std::forward<Handler> (handler),
-        [ec, bytes] (Handler& handler) { handler (ec, bytes); }
+      y::utility::capture (
+        [ec, bytes] (Handler& handler) { handler (ec, bytes); },
+        std::forward<Handler> (handler)
       )
     );
   }

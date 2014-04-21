@@ -33,8 +33,9 @@ struct sync_strategy: public std::enable_shared_from_this<sync_strategy>
     auto iterator = resolver.resolve (std::forward<Query> (query), ec);
 
     resolver.get_io_service ().post (
-      y::utility::capture (std::forward<Handler> (handler),
-        [ec, iterator] (Handler& handler) { handler (ec, iterator); }
+      y::utility::capture (
+        [ec, iterator] (Handler& handler) { handler (ec, iterator); },
+        std::forward<Handler> (handler)
       )
     );
   }
@@ -48,8 +49,9 @@ struct sync_strategy: public std::enable_shared_from_this<sync_strategy>
         std::forward<EndpointIterator> (iter), ec);
     
     socket.get_io_service ().post (
-      y::utility::capture (std::forward<Handler> (handler),
-        [ec, ret] (Handler& handler) { handler (ec, ret); }
+      y::utility::capture (
+        [ec, ret] (Handler& handler) { handler (ec, ret); },
+        std::forward<Handler> (handler)
       )
     );
   }
@@ -62,8 +64,9 @@ struct sync_strategy: public std::enable_shared_from_this<sync_strategy>
         std::forward<Buffer> (buffer), ec);
 
     socket.get_io_service ().post (
-      y::utility::capture (std::forward<Handler> (handler),
-        [ec, bytes] (Handler& handler) { handler (ec, bytes); }
+      y::utility::capture (
+        [ec, bytes] (Handler& handler) { handler (ec, bytes); },
+        std::forward<Handler> (handler)
       )
     );
   }
@@ -78,8 +81,9 @@ struct sync_strategy: public std::enable_shared_from_this<sync_strategy>
         std::forward<Buffer> (buffer), std::forward<Delim> (delim), ec);
 
     socket.get_io_service ().post (
-      y::utility::capture (std::forward<Handler> (handler),
-        [ec, bytes] (Handler& handler) { handler (ec, bytes); }
+      y::utility::capture (
+        [ec, bytes] (Handler& handler) { handler (ec, bytes); },
+        std::forward<Handler> (handler)
       )
     );
   }
@@ -92,8 +96,9 @@ struct sync_strategy: public std::enable_shared_from_this<sync_strategy>
     auto bytes = socket.read_some (buffers, ec);
 
     socket.get_io_service ().post (
-      y::utility::capture (std::forward<Handler> (handler),
-        [ec, bytes] (Handler& handler) { handler (ec, bytes); }
+      y::utility::capture (
+        [ec, bytes] (Handler& handler) { handler (ec, bytes); },
+        std::forward<Handler> (handler)
       )
     );
   }
