@@ -8,6 +8,7 @@
 #include "../../rfc822/rfc822.h"
 #include "../../rfc822/rfc2822_grammar.h"
 #include "../../rfc822/rfc2822_hooks.h"
+#include "../../rfc822/unfolding.h"
 #include <iostream>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
@@ -34,7 +35,9 @@ struct test_actions: public p52::rfc822::rfc2822::null_actions<IteratorT> {
         return boost::dynamic_pointer_cast<T>(fd.value);
     }
 
-    void on_field_data(field_data<iterator_t> const& fd) const {
+    void on_field_data(field_data<iterator_t> const& fd) const 
+    {
+#if 0
         if( auto al = value<address_list>(fd) ) {
             for (auto const& at : al->addrs) {
                 std::cout << fd.name <<": \"" << at.name << "\" <"
@@ -42,7 +45,9 @@ struct test_actions: public p52::rfc822::rfc2822::null_actions<IteratorT> {
             }
             return;
         }
+#endif
 
+#if 0
         if( auto mp = value<mime_type>(fd) ) {
             std::cout << "mime content type: " << mp->content_type.type
                     << "/" << mp->content_type.subtype << "\n";
@@ -51,7 +56,9 @@ struct test_actions: public p52::rfc822::rfc2822::null_actions<IteratorT> {
             }
             return;
         }
+#endif
 
+#if 0
         if( auto mp = value<mime_value>(fd) ) {
             std::cout << "mime value: " << mp->value << "\n";
             for (auto const& par : mp->params) {
@@ -60,10 +67,22 @@ struct test_actions: public p52::rfc822::rfc2822::null_actions<IteratorT> {
             }
             return;
         }
+#endif
 
+#if 0
         std::cout << fd.name << ": "
                 << std::string(fd.value->raw.begin(), fd.value->raw.end())
                 << std::endl;
+#endif
+
+#if 0
+				if (boost::algorithm::iequals (fd.name, "date"))
+        {
+					std::cout << fd.name << ": " << make_unfolding_range (fd.value->raw)
+					<< "\n";
+					return;
+        }
+#endif
     }
 
     void on_body_prefix(data_range_t const& data) const {

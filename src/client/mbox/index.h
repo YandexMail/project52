@@ -1,20 +1,27 @@
 #ifndef _P52_MBOX_INDEX_H_
 #define _P52_MBOX_INDEX_H_
 #include <mbox/mmap.h>
+#include <mbox/fix.h>
 #include <utility>
 #include <tuple>
 
 #include <map>
 #include <iostream>
+#include <boost/asio/buffer.hpp>
 
+#include "thread_pool.h"
 
 namespace p52 {
 namespace mbox {
 
+namespace asio = boost::asio;
+
 template <typename Mmap = mbox::mmap>
 class index 
 {
-  typedef std::multimap<std::size_t, char const*> index_type;
+public:
+  typedef std::vector<asio::const_buffer> buf_seq_type;
+  typedef std::multimap<std::size_t, buf_seq_type> index_type;
 
 public:
   index () = default;
@@ -29,6 +36,9 @@ public:
 
     std::size_t count = 0;
     std::size_t pcnt = 0;
+
+
+    thread_pool tp (20, 6);
 
     while (pos < end)
     {
@@ -45,7 +55,17 @@ public:
         pcnt = p;
       }
 
-      index_.insert (std::make_pair (size, addr));
+      auto inserted_iter = index_.emplace (size, buf_seq_type ());
+
+      tp.post (
+        [inserted_iter,addr,size] (std::size_t const&)
+        {
+          buf_seq_type& bufs = inserted_iter->second;
+          fix_message_parser fixer;
+          fixer.parse (bufs, addr, addr+size);
+          fixer.parse_end (bufs);
+        }
+      );
     }
 
     std::cout << "\n";

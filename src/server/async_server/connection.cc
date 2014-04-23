@@ -1,6 +1,7 @@
 #include "connection.h"
 #include <vector>
 #include <boost/bind.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include "../common/rfc822.h"
 
 const std::string Connection::endOfData = "\r\n.\r\n";
@@ -18,6 +19,7 @@ void Connection::writeGreeting() {
 }
 
 void Connection::handleGreetingWrite(const boost::system::error_code& e) {
+	if (! e)
     readCommand();
 }
 
@@ -38,10 +40,11 @@ std::string Connection::getCommand() {
 }
 
 void Connection::handleCommand(const boost::system::error_code& e) {
+	if (e) return;
     const std::string cmd = getCommand();
-    if( cmd == "DATA" ) {
+    if( boost::algorithm::iequals (cmd, "DATA") ) {
         writeDataGreeting();
-    } else if( cmd == "QUIT" ) {
+    } else if( boost::algorithm::iequals (cmd, "QUIT") ) {
         writeGoodbye();
     } else {
         commandReply();
@@ -69,6 +72,7 @@ void Connection::writeDataGreeting() {
 }
 
 void Connection::handleDataGreetingWrite(const boost::system::error_code& e) {
+	if (e) return;
     readData();
 }
 
@@ -79,6 +83,7 @@ void Connection::readData() {
 }
 
 void Connection::handleData(const boost::system::error_code& ec) {
+	if (ec) return;
     std::istream s(&inBuf);
     try {
         if( rfc822::parse(s) ) {

@@ -19,18 +19,15 @@ public:
     : yield_ (yield)
   {}
   
-  template <class Client, class Server, class Port, class MessageGenerator>
-  static void create (asio::io_service& io, Server&& server, Port&& port,
-      MessageGenerator&& msg_gen)
+  template <class Client, class... Args>
+  static void create (asio::io_service& io, Args&& ...args)
   {
     asio::spawn (io,
         [&] (boost::asio::yield_context yield)
         {
           auto&& cs = std::make_shared<coro_strategy> (yield);
 
-          std::make_shared<Client> (io, std::forward<Server> (server),
-            std::forward<Port>(port),
-            std::forward<MessageGenerator> (msg_gen), cs)->start ();
+          std::make_shared<Client> (cs, io, std::forward<Args> (args)...)->start ();
         }
     );
   }

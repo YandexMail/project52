@@ -27,7 +27,15 @@ int main (int ac, char* av[])
     typedef client<io_model, message_generator> client_type;
 
     auto&& io_mod = std::make_shared<io_model> ();
-    io_mod->create<client_type> (io_service, av[2], av[3], mgen);
+
+    p52::stats stats;
+
+    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
+    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
+    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
+    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
+    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
+    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
 
     io_service.run ();
   }

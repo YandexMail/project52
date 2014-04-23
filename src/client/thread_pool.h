@@ -80,7 +80,8 @@ public:
     lock_t lock (mux_);
     if (! running_) throw stopped ();
 
-	  read_cond_.wait (lock, [this] () -> bool { return q_.size () <= max_size_; });
+	  read_cond_.wait (lock, 
+	    [this] () -> bool { return q_.size () <= max_size_; });
 
     q_.push_back (std::forward<T> (task));
 
@@ -100,14 +101,14 @@ protected:
   {
   	lock_t lock (mux_);
   	write_cond_.wait (lock, [this] () -> bool { return ! q_.empty (); });
-    std::cout << "pop: wait returned, size=" << q_.size () << "\n";
+    // std::cout << "pop: wait returned, size=" << q_.size () << "\n";
 
     task_type task = std::move (q_.front ());
     q_.pop_front ();
 
     read_cond_.notify_one ();
 
-    std::cout << "pop: got task\n";
+    // std::cout << "pop: got task\n";
 
     if (! running_) 
     	throw stopped ();

@@ -24,23 +24,43 @@ class client
 public:
   typedef MessageGenerator message_generator;
 
-  client (asio::io_service& io_service, std::string const& server, 
+  client (
+      std::shared_ptr<sync_strategy> const& sync,
+      asio::io_service& io_service, 
+      std::string const& server, 
       std::string const& port, message_generator& mgen,
-      std::shared_ptr<sync_strategy> const& sync = 
-          std::make_shared<sync_strategy>() )
+      p52::stats& stats,
+      std::size_t max_messages = 0)
     : sync_ (sync)
     , server_ (server)
     , port_ (port)
     , resolver_ (io_service)
     , socket_ (io_service)
-    , state_machine_ (this, mgen, 2)
+    , state_machine_ (this, mgen, max_messages)
+    , stats_ (stats)
+  {
+  }
+
+  client (asio::io_service& io_service, 
+      std::string const& server, 
+      std::string const& port, message_generator& mgen,
+      p52::stats& stats,
+      std::size_t max_messages = 0)
+    : sync_ (std::make_shared<sync_strategy>())
+    , server_ (server)
+    , port_ (port)
+    , resolver_ (io_service)
+    , socket_ (io_service)
+    , state_machine_ (this, mgen, max_messages)
+    , stats_ (stats)
   {
   }
 
   ~client ()
   {
-  	std::cout << "client dtor\n";
   }
+
+  p52::stats& stats () { return stats_; }
 
   void start ()
   {
@@ -98,15 +118,9 @@ public:
   {
   }
 
-  template <typename Rng>
-  void send_message_data (Rng const& rng)
+  template <typename BufSeq>
+  void send_message_data (BufSeq const& bufseq)
   {
-  	std::vector<asio::const_buffer> bufseq;
-  	bufseq.emplace_back (boost::begin (rng), boost::size (rng));
-
-    static char const end_message[] = { "\r\n.\r\n" };
-  	bufseq.emplace_back (boost::begin (end_message), boost::size (end_message));
-
     sync_->write(socket_, bufseq,
       boost::bind(&client::handle_server_response, this->shared_from_this (),
         asio::placeholders::error));
@@ -115,7 +129,6 @@ public:
   template <class Msg>
   void send_and_parse_response (Msg const& msg)
   {
-  	std::cout << "send message called\n";
     std::ostream request_stream (&request_);
     request_stream << msg;
 
@@ -141,12 +154,14 @@ public:
             std::cout << "Error 6: " << err.message () << "\n";
             state_machine_.process_event (ev_error (err));
           }
-          else if (r.code >= 200 && r.code < 300)
+          else if (r.code >= 200 && r.code < 400)
           {
+          	// std::cout << "got from server: " << r.code << ": " << r.msg << "\n";
           	state_machine_.process_event (ev_ready (r));
           }
           else
           {
+          	std::cout << "got from server: " << r.code << ": " << r.msg << "\n";
             state_machine_.process_event (ev_error (r));
           }
         }
@@ -221,6 +236,7 @@ private:
   response_parser response_parser_;
 
   smtp_msm<client> state_machine_;
+  p52::stats& stats_;
 };
 
 #endif // _P52_CLIENT_H_

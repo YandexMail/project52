@@ -2,6 +2,7 @@
 #define _P52_SMTP_MSM_H_
 
 #include "smtp_events.h"
+#include "stats.h"
 
 
 #include <boost/msm/back/state_machine.hpp>
@@ -50,90 +51,53 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
   // The list of FSM states.
   struct Initial : public msm::front::state <>
   {
-    template <class Event, class FSM>
-    void on_entry (Event const&, FSM&) 
-    { 
-    	std::cout << "entering: Initial" << std::endl; 
-    }
-
-    template <class Event, class FSM>
-    void on_exit (Event const&, FSM&) 
-    { std::cout << "leaving: Initial" << std::endl; }
   };
 
   struct Resolve : public msm::front::state <>
   {
     template <class Event, class FSM>
-    void on_entry (Event const&, FSM& fsm)
+    void on_entry (Event const&, FSM& fsm) const
     { 
-    	std::cout << "entering: Resolve" << std::endl;
     	fsm.client ().do_resolve ();
-    }
-
-    template <class Event, class FSM>
-    void on_exit (Event const& ev, FSM& fsm) 
-    { 
-    	std::cout << "leaving: Resolve" << std::endl; 
     }
   };
 
   struct Connect : public msm::front::state <>
   {
     template <class Event, class FSM>
-    void on_entry (Event const& ev, FSM& fsm) 
+    void on_entry (Event const& ev, FSM& fsm) const
     { 
-    	std::cout << "entering: Connect" << std::endl; 
    		fsm.client ().do_connect (ev.endpoints);
    	}
-
-    template <class Event, class FSM>
-    void on_exit (Event const&, FSM&) 
-    { std::cout << "leaving: Connect" << std::endl; }
   };
 
   struct WaitHelo : public msm::front::state <>
   {
     template <class Event, class FSM>
-    void on_entry (Event const&, FSM& fsm) 
+    void on_entry (Event const&, FSM& fsm) const
     { 
-    	std::cout << "entering: WaitHelo" << std::endl; 
     	fsm.client ().handle_server_response ();
-    }
-
-    template <class Event, class FSM>
-    void on_exit (Event const&, FSM&) 
-    { 
-    	std::cout << "leaving: WaitHelo" << std::endl; 
     }
   };
 
   struct Handshake : public msm::front::state <>
   {
     template <class Event, class FSM>
-    void on_entry (Event const&, FSM& fsm) 
+    void on_entry (Event const&, FSM& fsm) const
     { 
-    	std::cout << "entering: Handshake" << std::endl; 
     	fsm.client ().send_and_parse_response (
     	  "helo localhost\r\n"
     	);
-    }
-
-    template <class Event, class FSM>
-    void on_exit (Event const&, FSM&) 
-    { 
-    	std::cout << "leaving: Handshake" << std::endl; 
     }
   };
 
   struct StartTLS : public msm::front::state <>
   {
+#if 0
     template <class Event, class FSM>
-    void on_entry (Event const&, FSM&) 
+    void on_entry (Event const&, FSM&) const
     { std::cout << "entering: StartTLS" << std::endl; }
-
-    template <class Event, class FSM>
-    void on_exit (Event const&, FSM&) 
-    { std::cout << "leaving: StartTLS" << std::endl; }
+#endif
   };
 
   struct MessageSend_ : public msm::front::state_machine_def<MessageSend_>
@@ -144,70 +108,76 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class Event, class FSM>
     void on_entry (Event const&, FSM& fsm) 
     { 
-    	std::cout << "entering: MessageSend" << std::endl; 
       client = &fsm.client ();
       mgen = &fsm.mgen_;
     }
 
+#if 0
     template <class Event, class FSM>
     void on_exit (Event const& e, FSM&) 
     { 
+
     	std::cout << "leaving: MessageSend on " << 
     	mtypeid (e).name ()
     	<< std::endl; 
     }
+#endif
 
     struct MailFrom : public msm::front::state <>
     {
       template <class Event, class FSM>
       void on_entry (Event const&, FSM& fsm) const
       { 
-      	std::cout << "     entering: MailFrom" << std::endl; 
     	  fsm.client->send_and_parse_response (
     	    "mail from:<>\r\n"
     	  );
       }
-
-      template <class Event, class FSM>
-      void on_exit (Event const&, FSM&) 
-      { std::cout << "    leaving: MailFrom" << std::endl; }
     };
 
     struct RcptTo : public msm::front::state <>
     {
       template <class Event, class FSM>
-      void on_entry (Event const&, FSM& fsm)
+      void on_entry (Event const&, FSM& fsm) const
       { 
-      	std::cout << "     entering: RcptTo" << std::endl;
     	  fsm.client->send_and_parse_response (
     	    "rcpt to:<>\r\n"
     	  );
       }
-
-      template <class Event, class FSM>
-      void on_exit (Event const&, FSM&) 
-      { std::cout << "     leaving: RcptTo" << std::endl; }
     };
+
+    struct Data : public msm::front::state <>
+    {
+      template <class Event, class FSM>
+      void on_entry (Event const&, FSM& fsm) const
+      { 
+    	  fsm.client->send_and_parse_response (
+    	    "data\r\n"
+        );
+      }
+    };
+
+    std::unique_ptr<p52::stats_sample> stat_sample;
 
     struct DataSend : public msm::front::state <>
     {
       template <class Event, class FSM>
-      void on_entry (Event const&, FSM& fsm) 
+      void on_entry (Event const&, FSM& fsm)
       { 
-      	std::cout << "     entering: DataSend" << std::endl;
       	auto client = fsm.client;
         (*fsm.mgen) (
-          [client] (typename message_generator::data_type const& data)
+          [&fsm,client] (typename message_generator::data_type const& data)
           {
-          	std::cout << "     entering: DataSend: send message" << std::endl;
-          	client->send_message_data (data);
+          	fsm.stat_sample = client->stats ().sample (data.first);
+          	client->send_message_data (data.second);
           }
         );
       }
 
       template <class Event, class FSM>
-      void on_exit (Event const&, FSM&) 
-      { std::cout << "     leaving: DataSend" << std::endl; }
+      void on_exit (Event const&, FSM& fsm)
+      { 
+      	fsm.stat_sample.reset ();
+      }
     };
 
     typedef MailFrom initial_state;
@@ -215,8 +185,8 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     struct transition_table : mpl::vector<
       //
       Row < MailFrom , ev_ready   , RcptTo   >
-    , Row < RcptTo   , ev_ready   , DataSend >
-    // , Row < DataSend , ev_ready   , MailFrom >
+    , Row < RcptTo   , ev_ready   , Data     >
+    , Row < Data     , ev_ready   , DataSend >
     > {};
 
     // Replaces the default no-transition response.
@@ -235,16 +205,9 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class Event, class FSM>
     void on_entry (Event const&, FSM& fsm) const
     { 
-    	std::cout << "entering: Quit" << std::endl; 
       fsm.client ().send_and_parse_response (
         "quit\r\n"
       );
-    }
-
-    template <class Event, class FSM>
-    void on_exit (Event const& e, FSM&) 
-    {
-    	std::cout << "leaving: Quit on " << mtypeid (e).name () << std::endl; 
     }
   };
 
@@ -253,14 +216,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class Event, class FSM>
     void on_entry (Event const&, FSM& fsm) const 
     { 
-    	std::cout << "entering: Close" << std::endl; 
       fsm.client ().do_close ();
-    }
-
-    template <class Event, class FSM>
-    void on_exit (Event const& e, FSM&) 
-    { 
-    	std::cout << "leaving: Close on " << mtypeid (e).name () << std::endl; 
     }
   };
 
@@ -269,13 +225,8 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class Event, class FSM>
     void on_entry (Event const&, FSM& fsm) const
     { 
-    	std::cout << "entering: Destroy" << std::endl; 
       fsm.client ().do_destroy ();
     }
-
-    template <class Event, class FSM>
-    void on_exit (Event const&, FSM&) 
-    { std::cout << "leaving: Destroy" << std::endl; }
   };
 
   typedef Resolve initial_state;
@@ -286,7 +237,8 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     void operator() (EVT const&, FSM& fsm, SourceState&, TargetState&) const
     {
       ++fsm.sent_messages;
-      std::cout << "*** sent_messages now = " << fsm.sent_messages << "\n";
+
+     // std::cout << "*** sent_messages now = " << fsm.sent_messages << "\n";
     }
   };
 
@@ -295,35 +247,42 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class EVT,class FSM,class SourceState,class TargetState>
     bool operator() (EVT const&, FSM const& fsm, SourceState&, TargetState&) const
     {
-      std::cout << "*** check_finish: " << fsm.sent_messages 
-      << " < " << fsm.max_messages << "\n";
+      return fsm.max_messages && fsm.sent_messages >= fsm.max_messages;
+    }
+  };
+
+  struct check_resume 
+  {
+    template <class EVT,class FSM,class SourceState,class TargetState>
+    bool operator() (EVT const&, FSM const& fsm, SourceState&, TargetState&) const
+    {
       return ! fsm.max_messages || fsm.sent_messages < fsm.max_messages;
     }
   };
 
   struct transition_table : mpl::vector<
     //
-    Row < Resolve      , ev_resolved   , Connect                            >
-  , Row < Resolve      , ev_error      , Destroy                            >
+    Row < Resolve      , ev_resolved   , Connect                               >
+  , Row < Resolve      , ev_error      , Destroy                               >
 
-  , Row < Connect      , ev_connected  , WaitHelo                           >
-  , Row < Connect      , ev_error      , Destroy                            >
+  , Row < Connect      , ev_connected  , WaitHelo                              >
+  , Row < Connect      , ev_error      , Destroy                               >
 
-  , Row < WaitHelo     , ev_ready      , Handshake                          >
-  , Row < WaitHelo     , ev_error      , Destroy                            >
+  , Row < WaitHelo     , ev_ready      , Handshake                             >
+  , Row < WaitHelo     , ev_error      , Destroy                               >
 
-  , Row < Handshake    , ev_ready      , MessageSend /*StartTLS*/                           >
-  , Row < Handshake    , ev_error      , Quit                               >
+  , Row < Handshake    , ev_ready      , MessageSend /*StartTLS*/              >
+  , Row < Handshake    , ev_error      , Quit                                  >
 
-//  , Row < StartTLS     , none /*ev_ready*/      , MessageSend                        >
-//  , Row < StartTLS     , ev_error      , Quit                               >
+//  , Row < StartTLS     , none /*ev_ready*/      , MessageSend                >
+//  , Row < StartTLS     , ev_error      , Quit                                >
 
-  , Row < MessageSend  , ev_ready , MessageSend , adjust_sent , check_finish>
-  , Row < MessageSend  , ev_ready      , Quit                               >
-  , Row < MessageSend  , ev_error      , Quit                               >
+  , Row < MessageSend  , ev_ready , Quit                                       >
+  , Row < MessageSend  , ev_ready , MessageSend , adjust_sent , check_resume   >
+  , Row < MessageSend  , ev_error , Quit                                       >
 
-  , Row < Quit         , boost::any      , Close                              >
-  , Row < Close        , boost::any    , Destroy                            >
+  , Row < Quit         , boost::any    , Close                                 >
+  , Row < Close        , boost::any    , Destroy                               >
   > {};
 
   // Replaces the default no-transition response.
@@ -343,7 +302,7 @@ namespace {
 static char const* const state_names[] = { 
    "Initial", 
   "Resolve", "Connect", "WaitHelo", "Handshake", "StartTLS", 
-  "MessageSend",  //"MailFrom", "RcptTo", "DataSend", 
+  "MessageSend",  //"MailFrom", "RcptTo", "Data", "DataSend"
   "Quitting", "Close", "Destroy"
 };
 
