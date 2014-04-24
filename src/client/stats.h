@@ -14,11 +14,14 @@
 #include <boost/accumulators/statistics/max.hpp>
 
 #include <boost/noncopyable.hpp>
+#include <boost/format.hpp>
 
 namespace p52 {
 
 namespace acc = boost::accumulators;
 namespace tag = boost::accumulators::tag;
+
+using boost::format;
 
 std::string size_units (std::size_t const& sz)
 {
@@ -46,7 +49,7 @@ std::string size_units (std::size_t const& sz)
   }
 
   std::ostringstream os;
-  if (sz > 1024) os.precision (2);
+  os.precision (2);
   os << std::fixed << val << unit;
   return os.str ();
 
@@ -70,7 +73,7 @@ std::string pretty_time (T const& t)
 		unit = "us";
   } 
   std::ostringstream os;
-  if (t >= 1000) os.precision (2);
+  os.precision (2);
   os << std::fixed << val << unit;
   return os.str ();
 }
@@ -107,8 +110,8 @@ public:
   	std::lock_guard<std::mutex> lock (mux_);
   	msg_size_ (sz);
 
-  	if (acc::count (msg_size_) % 10000 == 0)
-  		print_size ();
+  	if (acc::count (msg_size_) % 50000 == 0)
+  		print ();
   }
 
   template <typename Duration>
@@ -118,8 +121,8 @@ public:
   	// std::cout << "logging time = " << duration.count () << "\n";
   	time_ (duration.count ());
 
-  	if (acc::count (time_) % 10000 == 0)
-  		print_time ();
+  	if (acc::count (time_) % 50000 == 0)
+  		print ();
   }
 
   template <typename Duration>
@@ -129,15 +132,31 @@ public:
   	// std::cout << "logging speed = " << (sz*1.0/duration.count ()) << "\n";
   	speed_ (sz*1.0/duration.count ());
 
-  	if (acc::count (speed_) % 10000 == 0)
-  		print_speed ();
+  	if (acc::count (speed_) % 50000 == 0)
+  		print ();
   }
 
-  template <typename Acc>
-  void print_size (Acc& ac) const
+  template <typename Acc1, typename Acc2, typename Acc3>
+  void print (Acc1 const& size, Acc2 const& time, Acc3 const& speed) const
   {
-  	std::cout << "====== Size =====\n";
-  	std::cout << "Count  : " << acc::count (ac) << "\n";
+  	std::cout << "         ======= Size =======  ======= Time =======  ======= Speed =======\n";
+  	std::cout << "Count  : " << format ("%1$20d\n") % acc::count (size);
+
+  	std::cout << format ("Sum    : %1$20s  %2$20s\n")
+  	             % pretty_size (acc::sum (size))
+  	             % pretty_time (acc::sum (time));
+
+  	std::cout << format ("Average: %1$20s  %2$20s   %3$20s\n")
+  	             % pretty_size (acc::mean (size))
+  	             % pretty_time (acc::mean (time))
+  	             % pretty_speed (acc::mean (speed));
+
+  	std::cout << format ("Min/Max:  %1$8s - %2$8s   %3$8s - %4$8s   %5$8s - %6$8s\n")
+  	             % pretty_size (acc::min (size))   % pretty_size (acc::max (size))
+  	             % pretty_time (acc::min (time))   % pretty_time (acc::max (time))
+  	             % pretty_speed (acc::min (speed)) % pretty_speed (acc::max (speed));
+
+#if 0
   	std::cout << "Sum    : " << pretty_size (acc::sum (ac)) << "\n";
   	std::cout << "Mean   : " << pretty_size (acc::mean (ac)) << "\n";
   	std::cout << "Min/Max: " << pretty_size (acc::min (ac)) << "-" <<
@@ -164,11 +183,10 @@ public:
   	std::cout << "Mean   : " << pretty_speed (acc::mean (ac)) << "\n";
   	std::cout << "Min/Max: " << pretty_speed (acc::min (ac)) << "-" <<
   	    pretty_speed (acc::max (ac)) << "\n";
+#endif
   }
 
-  void print_size () const { print_size (msg_size_); }
-  void print_time () const { print_time (time_); }
-  void print_speed () const{ print_speed (speed_); }
+  void print () const { print (msg_size_, time_, speed_); }
 
   inline std::unique_ptr<stats_sample> sample (std::size_t sz = 0);
 

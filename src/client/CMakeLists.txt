@@ -34,10 +34,11 @@ REQUIRED)
 find_package(ZLib)
 
 include_directories(${Boost_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIR})
-include_directories("/Users/nikki/Work/github/yamail/include")
+include_directories("/home/nikki/yamail/include")
 include_directories(".")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable -std=c++11")
+set(CMAKE_CXX_FLAGS 
+  "${CMAKE_CXX_FLAGS} -Wno-unused-variable -std=c++11 -pthread")
 
 add_executable(sync_client client.cc)
 set_target_properties (sync_client PROPERTIES COMPILE_DEFINITIONS "IO=sync_strategy")

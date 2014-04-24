@@ -2,6 +2,9 @@
 #define _P52_MESSAGE_GENERATOR_H_
 
 #include "mbox/index.h"
+#include <vector>
+#include <algorithm>
+#include <boost/algorithm/string/predicate.hpp>
 
 struct message_generator 
 {
@@ -11,27 +14,50 @@ struct message_generator
   //  data_type;
   typedef index::index_type::value_type data_type;
 
-  message_generator( iterator first, iterator last )
-  : i(first), first(first), last(last)
+  message_generator( iterator first, iterator const& last )
+  // : shuffled (last-first)
   {
+    while (first != last) shuffled.push_back (first++);
+    std::random_shuffle (shuffled.begin (), shuffled.end ());
+    i = shuffled.begin ();
+  
+    self_check (i);
   }
 
   message_generator (message_generator const& mg)
-    : i (mg.i), first (mg.first), last (mg.last) 
+  : shuffled (mg.shuffled)
+  , i (shuffled.begin ())
   {
+    mg.self_check (mg.i);
+    self_check (i);
+  }
+
+  template <typename I>
+  void self_check (I i) const
+  {
+#if 0
+    std::cout << "message_generator self check\n";
+    for (auto iii=i; iii<shuffled.end (); ++iii)
+    {
+      auto sz = (*iii)->first;
+    }
+    std::cout << "message_generator self check: ok\n";
+#endif
   }
 
   template <typename Handler>
   void operator() (Handler&& h)
   {
-  	auto ii = i;
-    if( ++i == last ) i = first;
-    std::forward<Handler> (h) (*ii); // ii->second);
+    auto ii = *i;
+    self_check (i);
+
+    if( ++i == shuffled.end () )
+      i = shuffled.begin ();
+    std::forward<Handler> (h) (*ii);
   }
 
-  iterator i;
-  const iterator first;
-  const iterator last;
+  std::vector<iterator> shuffled;
+  std::vector<iterator>::const_iterator i;
 };
 
 #endif // _P52_MESSAGE_GENERATOR_H_

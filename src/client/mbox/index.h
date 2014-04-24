@@ -38,7 +38,7 @@ public:
     std::size_t pcnt = 0;
 
 
-    thread_pool tp (20, 6);
+    thread_pool tp (100, 24);
 
     while (pos < end)
     {
@@ -51,21 +51,32 @@ public:
       std::size_t p = static_cast<std::size_t> (100.0*(pos-mmap_.begin ())/mmap_.size ());
       if (p != pcnt)
       {
-        std::cout << "Parsed: " << count << ", p=" << p << "%\r" << std::flush;
+        std::cout << "Parsed: " << count << " msgs, " << p << "%\r" << std::flush;
         pcnt = p;
       }
 
       auto inserted_iter = index_.emplace (size, buf_seq_type ());
+      buf_seq_type* bufs = &(inserted_iter->second);
 
       tp.post (
-        [inserted_iter,addr,size] (std::size_t const&)
+        [bufs,addr,size,inserted_iter] (std::size_t const&)
         {
-          buf_seq_type& bufs = inserted_iter->second;
           fix_message_parser fixer;
-          fixer.parse (bufs, addr, addr+size);
-          fixer.parse_end (bufs);
+          fixer.parse (*bufs, addr, addr+size);
+          fixer.parse_end (*bufs);
+	        assert (asio::buffers_end (*bufs) - asio::buffers_begin (*bufs) > 0);
+	        assert (inserted_iter->first > 0);
         }
       );
+    }
+
+    tp.close ();
+
+    for (auto b: index_)
+    {
+	    buf_seq_type& bufs = b.second;
+      assert (asio::buffers_end (bufs) - asio::buffers_begin (bufs) > 0);
+      int i = b.first;
     }
 
     std::cout << "\n";

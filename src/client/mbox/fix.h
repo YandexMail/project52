@@ -64,8 +64,8 @@ struct fix_message_parser
     		begin = current;
       }
       	
-//    	if (result == r_cr) insert_cr (bufs);
-//    	if (result == r_lf) insert_lf (bufs);
+    	if (result == r_cr) insert_cr (bufs);
+    	if (result == r_lf) insert_lf (bufs);
     	if (result == r_dot) insert_dot (bufs);
     }
 
@@ -107,15 +107,17 @@ struct fix_message_parser
 
   result_type consume (char input)
   {
+      print (input);
   	switch (state_)
     {
     	case s_init: 
-        print (input);
-      	state_ = s_default;
-       	return is_dot (input) ? r_dot : r_default;
+	state_ = s_default;
+       	if (is_dot (input))
+	{ 
+		return r_dot;
+	}
 
       case s_default:
-        print (input);
         if (is_lf (input))
         {
         	state_ = s_init;
@@ -131,7 +133,6 @@ struct fix_message_parser
         return r_default;
 
       case s_cr: 
-        print (input);
         state_ = is_lf (input) ? s_init : s_default;
         return r_default;
 

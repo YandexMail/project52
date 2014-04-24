@@ -27,20 +27,25 @@ public:
   client (
       std::shared_ptr<sync_strategy> const& sync,
       asio::io_service& io_service, 
+      std::size_t id,
       std::string const& server, 
       std::string const& port, message_generator& mgen,
       p52::stats& stats,
       std::size_t max_messages = 0)
     : sync_ (sync)
+    , id_ (id)
     , server_ (server)
     , port_ (port)
+    , strand_ (io_service)
     , resolver_ (io_service)
     , socket_ (io_service)
     , state_machine_ (this, mgen, max_messages)
     , stats_ (stats)
   {
+    // std::cout << "creating client #" << id_ << "\n";
   }
 
+#if 0
   client (asio::io_service& io_service, 
       std::string const& server, 
       std::string const& port, message_generator& mgen,
@@ -55,9 +60,12 @@ public:
     , stats_ (stats)
   {
   }
+#endif
 
   ~client ()
   {
+    std::cout << "client #" << id_ << " destorying\n";
+    abort ();
   }
 
   p52::stats& stats () { return stats_; }
@@ -121,9 +129,14 @@ public:
   template <typename BufSeq>
   void send_message_data (BufSeq const& bufseq)
   {
-    sync_->write(socket_, bufseq,
+#if 0
+std::cout << "bufseq size=" 
+	<< (asio::buffers_end (bufseq) - 	
+            asio::buffers_begin (bufseq)) << "\n";
+#endif
+    sync_->write(socket_, bufseq, strand_.wrap (
       boost::bind(&client::handle_server_response, this->shared_from_this (),
-        asio::placeholders::error));
+        asio::placeholders::error, asio::placeholders::bytes_transferred)));
   }
 
   template <class Msg>
@@ -132,20 +145,24 @@ public:
     std::ostream request_stream (&request_);
     request_stream << msg;
 
-    sync_->write(socket_, request_,
+    sync_->write(socket_, request_, strand_.wrap (
       boost::bind(&client::handle_server_response, this->shared_from_this (),
-        asio::placeholders::error));
+        asio::placeholders::error, asio::placeholders::bytes_transferred)));
   }
 
 
   void handle_server_response (
-    boost::system::error_code const& err = boost::system::error_code ())
+    boost::system::error_code const& err = boost::system::error_code (),
+    std::size_t bytes = 0)
   {
   	if (!err)
     {
+#if 0
+std::cout << "sent to server " << bytes << " bytes\n";
+#endif
       auto self = this->shared_from_this ();
       response_parser_.reset ();
-      parse_response (
+      this->parse_response (
         [this, self] (boost::system::error_code const& err, 
                         server_response const& r) 
         { 
@@ -154,9 +171,11 @@ public:
             std::cout << "Error 6: " << err.message () << "\n";
             state_machine_.process_event (ev_error (err));
           }
-          else if (r.code >= 200 && r.code < 400)
+          else if (r.code >= 200 && r.code < 500)
           {
-          	// std::cout << "got from server: " << r.code << ": " << r.msg << "\n";
+            if (r.code >= 400)
+              std::cout << "got from server: " << r.code << ": " 
+                  << r.msg << "\n";
           	state_machine_.process_event (ev_ready (r));
           }
           else
@@ -176,14 +195,14 @@ public:
 
 private:
   template <typename Handler>
-  void parse_response (Handler&& handler)
+  void parse_response (Handler handler)
   {
 	  auto self = this->shared_from_this ();
 
-  	sync_->read_some (socket_, asio::buffer (buffer_),
+  	sync_->read_some (socket_, asio::buffer (buffer_), strand_.wrap (
   	  y::utility::capture (
-        [this, self] (Handler& handler, boost::system::error_code const& ec,
-              std::size_t bytes)
+        [this] (Handler& handler, std::shared_ptr<client>& self, 
+            boost::system::error_code const& ec, std::size_t bytes)
         {
           if (! ec)
           {
@@ -198,32 +217,41 @@ private:
             }
             else if (! result)
             {
-              std::cout << "bad response\n";
+              std::cout << "bad response: size=" << bytes 
+#if 0
+		<< ", " << boost::make_iterator_range (
+			buffer_.data (), buffer_.data () + bytes) 
+#endif
+		<< "\n";
               handler (p52::error::make_error_code (
                 p52::error::bad_server_response), resp_);
             }
             else
             {
-              // std::cout << "incomplete response\n";
-              parse_response (handler);
+              std::cout << "incomplete response\n";
+              this->parse_response (handler);
             }
           } 
           else 
           {
             // connection.manager_.stop (self);
+            std::cout << "parse_response error: " << ec.message () << "\n";
             handler (ec, resp_);
           }
         },
-        std::forward<Handler> (handler)
+        std::forward<Handler> (handler),
+        std::move (self)
       )
-    );
+    ));
   }
 
   std::shared_ptr<sync_strategy> sync_;
 
+  std::size_t id_;
   std::string server_;
   std::string port_;
 
+  asio::io_service::strand strand_;
   tcp::resolver resolver_;
   tcp::socket socket_;
   asio::streambuf request_;

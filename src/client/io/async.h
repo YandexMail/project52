@@ -4,16 +4,28 @@
 #include "asio.h"
 #include <memory>
 #include <functional>
+#include <yamail/utility/capture.h>
 
 struct async_strategy: public std::enable_shared_from_this<async_strategy>
 {
   template <class Client, class... Args>
   void create (asio::io_service& io, Args&& ...args)
   {
-    io.post ([&] {
+#if 0
+    std::cout << "creating CLIENT #" << id << "\n";
+    io.post ([this, &io] {
         std::make_shared<Client> (this->shared_from_this (), io, 
           std::forward<Args> (args)...)->start (); 
     });
+#else
+    io.post (y::utility::capture ([this,&io] (Args& ...args)
+      {
+        std::make_shared<Client> (this->shared_from_this (), io, 
+          args...)->start (); 
+      },
+      std::forward<Args> (args)...));
+#endif
+
   }
 
   template <class Socket>
@@ -31,24 +43,24 @@ struct async_strategy: public std::enable_shared_from_this<async_strategy>
   }
 
   template <class Socket, class EndpointIterator, class Handler>
-  static void connect (Socket&& socket, EndpointIterator&& iter, Handler&& h)
+  static void connect (Socket& socket, EndpointIterator&& iter, Handler&& h)
   {
-    asio::async_connect (std::forward<Socket> (socket), 
+    asio::async_connect (socket, 
         std::forward<EndpointIterator> (iter), std::forward<Handler> (h));
   }
 
   template <class Socket, class Buffer, class Handler>
-  static void write (Socket&& socket, Buffer&& buffer, Handler&& h)
+  static void write (Socket& socket, Buffer&& buffer, Handler&& h)
   {
-    asio::async_write (std::forward<Socket> (socket),
+    asio::async_write (socket,
         std::forward<Buffer> (buffer), std::forward<Handler> (h));
   }
 
   template <class Socket, class Buffer, class Delim, class Handler>
-  static void read_until (Socket&& socket, Buffer&& buffer, 
+  static void read_until (Socket& socket, Buffer&& buffer, 
       Delim&& delim, Handler&& handler)
   {
-    asio::async_read_until (std::forward<Socket> (socket),
+    asio::async_read_until (socket,
         std::forward<Buffer> (buffer), std::forward<Delim> (delim),
         std::forward<Handler> (handler));
   }

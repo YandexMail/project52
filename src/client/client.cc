@@ -1,21 +1,29 @@
-#include "client.h"
-#include "io/sync.h"
-#include "io/async.h"
-#include "io/coro.h"
-#include "message_generator.h"
-
 #if !defined(IO)
 # define IO async_strategy
 #endif
+
+#include "client.h"
+
+#if 0 // IO == sync_strategy
+#include "io/sync.h"
+#endif
+#if IO == async_strategy
+#include "io/async.h"
+#endif
+#if 0 // IO == coro_strategy
+#include "io/coro.h"
+#endif
+#include "message_generator.h"
+#include <functional>
 
 
 int main (int ac, char* av[])
 {
   try 
   {
-    if (ac != 4)
+    if (ac != 6)
     {
-      std::cout << "Usage: client <message_archive_file> <server_address> <port>\n";
+      std::cout << "Usage: client <message_archive_file> <sessions> <threads> <server_address> <port>\n";
       return 1;
     }
     message_generator::index index(av[1]);
@@ -30,14 +38,22 @@ int main (int ac, char* av[])
 
     p52::stats stats;
 
-    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
-    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
-    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
-    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
-    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
-    io_mod->create<client_type> (io_service, av[2], av[3], mgen, stats);
+    for (int i=0; i<atoi(av[2]); ++i)
+    {
+      io_mod->create<client_type> (io_service, i, av[4], av[5], mgen, std::ref (stats));
+    }
 
-    io_service.run ();
+ //   std::thread thr1 ([&io_service] { io_service.run (); abort (); });
+ //   std::thread thr2 ([&io_service] { io_service.run (); abort (); });
+ //   std::thread thr3 ([&io_service] { io_service.run (); abort (); });
+ //   std::thread thr4 ([&io_service] { io_service.run (); abort (); });
+ //   std::thread thr5 ([&io_service] { io_service.run (); abort (); });
+    std::vector<std::thread> thr_group;
+    for (int i=1; i<atoi(av[3]); ++i)
+      thr_group.emplace_back ([&io_service] { try { io_service.run (); } catch
+      (...) { abort (); }  abort (); });
+    try { io_service.run (); } catch (...) { abort (); }
+    abort ();
   }
   catch (std::exception const& e)
   {

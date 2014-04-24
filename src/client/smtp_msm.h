@@ -108,6 +108,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class Event, class FSM>
     void on_entry (Event const&, FSM& fsm) 
     { 
+      // std::cout << "entering 'MessageSend' state\n";
       client = &fsm.client ();
       mgen = &fsm.mgen_;
     }
@@ -128,6 +129,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
       template <class Event, class FSM>
       void on_entry (Event const&, FSM& fsm) const
       { 
+        // std::cout << "entering 'MailFrom' state\n";
     	  fsm.client->send_and_parse_response (
     	    "mail from:<>\r\n"
     	  );
@@ -139,6 +141,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
       template <class Event, class FSM>
       void on_entry (Event const&, FSM& fsm) const
       { 
+        // std::cout << "entering 'RcptTo' state\n";
     	  fsm.client->send_and_parse_response (
     	    "rcpt to:<>\r\n"
     	  );
@@ -150,9 +153,16 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
       template <class Event, class FSM>
       void on_entry (Event const&, FSM& fsm) const
       { 
+        // std::cout << "entering 'Data' state\n";
     	  fsm.client->send_and_parse_response (
     	    "data\r\n"
         );
+      }
+
+      template <class Event, class FSM>
+      void on_exit (Event const&, FSM& fsm) const
+      { 
+        // std::cout << "leaving 'Data' state\n";
       }
     };
 
@@ -163,12 +173,16 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
       template <class Event, class FSM>
       void on_entry (Event const&, FSM& fsm)
       { 
+        // std::cout << "entering 'DataSend' state\n";
       	auto client = fsm.client;
         (*fsm.mgen) (
           [&fsm,client] (typename message_generator::data_type const& data)
           {
+            // std::cout << "mgen: get sample for: " << data.first << "\n";
           	fsm.stat_sample = client->stats ().sample (data.first);
+            // std::cout << "mgen: send_message_data\n";
           	client->send_message_data (data.second);
+            // std::cout << "mgen: send_message_data - ok\n";
           }
         );
       }
@@ -176,6 +190,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
       template <class Event, class FSM>
       void on_exit (Event const&, FSM& fsm)
       { 
+        // std::cout << "leaving 'DataSend' state\n";
       	fsm.stat_sample.reset ();
       }
     };
@@ -205,6 +220,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class Event, class FSM>
     void on_entry (Event const&, FSM& fsm) const
     { 
+      std::cout << "entering 'Quit' state\n";
       fsm.client ().send_and_parse_response (
         "quit\r\n"
       );
@@ -216,6 +232,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class Event, class FSM>
     void on_entry (Event const&, FSM& fsm) const 
     { 
+      std::cout << "entering 'Close' state\n";
       fsm.client ().do_close ();
     }
   };
@@ -225,6 +242,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class Event, class FSM>
     void on_entry (Event const&, FSM& fsm) const
     { 
+      std::cout << "entering 'Destroy' state\n";
       fsm.client ().do_destroy ();
     }
   };

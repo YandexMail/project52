@@ -48,16 +48,16 @@ public:
 
   void close (bool force = false)
   {
-  	std::cout << "thread_pool::close\n";
+  	// std::cout << "thread_pool::close\n";
   	{ 
   		lock_t lock (mux_);
   	  running_ = false;
 
   	  if (force) 
       {
-      	std::cout << "clearing queue: size was " << q_.size () << "\n";
+      	// std::cout << "clearing queue: size was " << q_.size () << "\n";
   	  	q_.clear ();
-      	std::cout << "size is " << q_.size () << "\n";
+      	// std::cout << "size is " << q_.size () << "\n";
       }
 
       // force threads to check 'running_' var
@@ -110,7 +110,7 @@ protected:
 
     // std::cout << "pop: got task\n";
 
-    if (! running_) 
+    if (!task && ! running_) 
     	throw stopped ();
 
     return task;
