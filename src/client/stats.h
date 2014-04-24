@@ -15,6 +15,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/format.hpp>
+#include <boost/circular_buffer.hpp>
 
 namespace p52 {
 
@@ -23,7 +24,32 @@ namespace tag = boost::accumulators::tag;
 
 using boost::format;
 
-std::string size_units (std::size_t const& sz)
+namespace chrono = std::chrono;
+
+namespace {
+
+inline std::string 
+pretty_count (std::size_t c)
+{
+  std::string ret = { "" };
+
+  while (c)
+  {
+    std::size_t rest = c % 1000;
+    c /= 1000;
+
+    std::ostringstream os;
+    if (c) os << '\'' << std::setfill ('0') << std::setw (3);
+    os << rest;
+
+    ret = os.str () + ret;
+  }
+
+  return ret;
+}
+
+inline std::string 
+size_units (std::size_t const& sz)
 {
 	float val = 1.0 * sz;
 	char const* unit = "";
@@ -78,129 +104,214 @@ std::string pretty_time (T const& t)
   return os.str ();
 }
 
-std::string pretty_size (std::size_t const& t)
+inline std::string 
+pretty_size (std::size_t const& t)
 {
 	return size_units (t);
 }
 
-std::string pretty_speed (double const& t)
+inline std::string 
+pretty_speed (double const& t)
 {
 	return pretty_size (static_cast<std::size_t> (t)) + "/s";
 }
 
+} // namespace anon
+
 class stats_sample;
-class stats : boost::noncopyable
+
+template <typename Clock = chrono::high_resolution_clock>
+class basic_stats : boost::noncopyable
 {
+  typedef Clock clock_type;
+  typedef typename clock_type::time_point time_point;
+  typedef typename clock_type::duration duration_type;
+  typedef typename duration_type::rep ticks_type;
+
 	typedef acc::accumulator_set<std::size_t, 
-	      acc::stats<tag::count, tag::sum, tag::mean, tag::min, tag::max>>
+	      acc::stats<tag::sum, tag::mean, tag::min, tag::max>>
 	      msg_size_type;
 
 	typedef acc::accumulator_set<std::chrono::high_resolution_clock::duration::rep, 
-	      acc::stats<tag::sum, tag::mean, tag::min, tag::max>>
+	      acc::stats<tag::sum, tag::min, tag::max>>
 	      time_type;
 
 	typedef acc::accumulator_set<double, 
-	      acc::stats<tag::mean, tag::min, tag::max>>
+	      acc::stats<tag::sum, tag::min, tag::max>>
 	      speed_type;
 	      
+	struct acc_type 
+	{
+	  std::size_t count = 0;
+	  msg_size_type size;
+	  time_type     time;
+	  speed_type    speed;
+  };
+
+  mutable std::mutex mux_;
+
+  // configuration
+  duration_type delta_size_ = chrono::seconds (15);
+  std::size_t   max_slots_ = 60;
+
+  time_point last_slot_ = time_point::min ();
+  boost::circular_buffer<acc_type> samples_;
+
+  
+  void
+  roll_acc (time_point const& now = clock_type::now ())
+  {
+    // duration between now and last slot
+    duration_type duration_from_last_slot = now - last_slot_;
+    std::size_t   slots = duration_from_last_slot / delta_size_;
+
+    if (slots > max_slots_) 
+      slots = max_slots_;
+
+    if (slots > 0)
+    {
+      print ();
+
+      if (samples_.empty ()) samples_.push_back (acc_type ());
+      else samples_.rinsert (samples_.begin (), slots, acc_type ());
+
+      last_slot_ = now;
+    }
+  }
 
 public:
-  void log_size (std::size_t const& sz)
+  basic_stats (std::size_t max_slots = 60)
+    : max_slots_ (max_slots)
+    , samples_ (max_slots)
+  {}
+  template <typename Rep, typename Period>
+  void log (chrono::duration<Rep,Period> const& dur, std::size_t size)
   {
-  	std::lock_guard<std::mutex> lock (mux_);
-  	msg_size_ (sz);
+    using chrono::duration;
+    using chrono::duration_cast;
 
-  	if (acc::count (msg_size_) % 50000 == 0)
-  		print ();
+    auto dur_ticks = duration_cast<duration_type> (dur).count ();
+    auto dur_double = duration_cast<duration<double>> (dur).count ();
+
+  	std::lock_guard<std::mutex> lock (mux_);
+
+    roll_acc ();
+
+    acc_type& accu = samples_.front ();
+
+    ++accu.count;
+    accu.size (size);
+    accu.time (dur_ticks);
+    accu.speed (1.0 * size / dur_double);
   }
 
-  template <typename Duration>
-  void log_time (Duration const& duration)
+  void print ()
   {
-  	std::lock_guard<std::mutex> lock (mux_);
-  	// std::cout << "logging time = " << duration.count () << "\n";
-  	time_ (duration.count ());
+    std::cout <<
+"===========================================================================\n";
 
-  	if (acc::count (time_) % 50000 == 0)
-  		print ();
+    print (60, "15 min"); std::cout << "\n";
+    print (20, " 5 min"); std::cout << "\n";
+    print ( 4, " 1 min"); std::cout << "\n";
   }
 
-  template <typename Duration>
-  void log_speed (Duration const& duration, std::size_t const& sz)
+  void print (std::size_t deltas, char const* label = "") const
   {
-  	std::lock_guard<std::mutex> lock (mux_);
-  	// std::cout << "logging speed = " << (sz*1.0/duration.count ()) << "\n";
-  	speed_ (sz*1.0/duration.count ());
+    std::size_t count = 0;
+    std::size_t size_sum = 0; ticks_type time_sum = 0; double speed_sum = 0.0;
 
-  	if (acc::count (speed_) % 50000 == 0)
-  		print ();
-  }
+    double size_avg, time_avg, speed_avg;
 
-  template <typename Acc1, typename Acc2, typename Acc3>
-  void print (Acc1 const& size, Acc2 const& time, Acc3 const& speed) const
-  {
-  	std::cout << "         ======= Size =======  ======= Time =======  ======= Speed =======\n";
-  	std::cout << "Count  : " << format ("%1$20d\n") % acc::count (size);
+    std::size_t size_min = std::numeric_limits<std::size_t>::max (),
+                size_max = std::numeric_limits<std::size_t>::min ();
+    ticks_type time_min = std::numeric_limits<ticks_type>::max (),
+               time_max = std::numeric_limits<ticks_type>::min ();
+    double speed_min = std::numeric_limits<double>::max (),
+           speed_max = std::numeric_limits<double>::min ();
+
+    double rps;
+
+    using chrono::duration;
+    using chrono::duration_cast;
+
+    {
+  	  // std::lock_guard<std::mutex> lock (mux_);
+
+  	  deltas = std::min (deltas, samples_.size ());
+  	  for (std::size_t i=0; i < deltas; ++i)
+      {
+        acc_type const& accu = samples_[i];
+
+        count += accu.count;
+
+        size_sum  += acc::sum (accu.size);
+        time_sum  += acc::sum (accu.time);
+        speed_sum += acc::sum (accu.speed);
+        
+        size_min = std::min (size_min, acc::min (accu.size));
+        size_max = std::max (size_max, acc::max (accu.size));
+
+        time_min = std::min (time_min, acc::min (accu.time));
+        time_max = std::max (time_max, acc::max (accu.time));
+
+        speed_min = std::min (speed_min, acc::min (accu.speed));
+        speed_max = std::max (speed_max, acc::max (accu.speed));
+      }
+    }
+
+    if (count)
+    {
+      size_avg = 1.0 * size_sum / count;
+      time_avg = 1.0 * time_sum / count;
+      speed_avg = speed_sum / count;
+
+      using chrono::duration_cast;
+      using chrono::duration;
+
+      rps = 1.0 * count / 
+        duration_cast<duration<double>> (delta_size_ * deltas).count ();
+    }
+    else
+    {
+      size_avg = time_avg = speed_avg = 0.0;
+      size_min = size_max = 0;
+      time_min = time_max = 0;
+      speed_min = speed_max = 0.0;
+      rps = 0.0;
+    }
+
+    std::cout << format (" %1$6s ") % label 
+      << "=== Message Size ===  == Response Times ==  === Processing Speed ===\n";
+
+  	std::cout << "Count  : " 
+  	          << format ("%1$20s                       %2$20.2f RPS\n") 
+  	             % pretty_count (count)
+  	             % rps;
 
   	std::cout << format ("Sum    : %1$20s  %2$20s\n")
-  	             % pretty_size (acc::sum (size))
-  	             % pretty_time (acc::sum (time));
+  	             % pretty_size (size_sum)
+  	             % pretty_time (time_sum);
 
-  	std::cout << format ("Average: %1$20s  %2$20s   %3$20s\n")
-  	             % pretty_size (acc::mean (size))
-  	             % pretty_time (acc::mean (time))
-  	             % pretty_speed (acc::mean (speed));
+  	std::cout << format ("Average: %1$20s  %2$20s     %3$20s\n")
+  	             % pretty_size (size_avg)
+  	             % pretty_time (time_avg)
+  	             % pretty_speed (speed_avg);
 
-  	std::cout << format ("Min/Max:  %1$8s - %2$8s   %3$8s - %4$8s   %5$8s - %6$8s\n")
-  	             % pretty_size (acc::min (size))   % pretty_size (acc::max (size))
-  	             % pretty_time (acc::min (time))   % pretty_time (acc::max (time))
-  	             % pretty_speed (acc::min (speed)) % pretty_speed (acc::max (speed));
+  	std::cout << format ("Min/Max:  %1$8s - %2$8s   %3$8s - %4$8s  %5$10s - %6$10s\n")
+  	             % pretty_size (size_min)   % pretty_size (size_max)
+  	             % pretty_time (time_min)   % pretty_time (time_max)
+  	             % pretty_speed (speed_min) % pretty_speed (speed_max);
 
-#if 0
-  	std::cout << "Sum    : " << pretty_size (acc::sum (ac)) << "\n";
-  	std::cout << "Mean   : " << pretty_size (acc::mean (ac)) << "\n";
-  	std::cout << "Min/Max: " << pretty_size (acc::min (ac)) << "-" <<
-  	    pretty_size (acc::max (ac)) << "\n";
   }
-
-  template <typename Acc>
-  void print_time (Acc& ac) const
-  {
-  	std::cout << "====== Time =====\n";
-  	// std::cout << "Count  : " << acc::count (ac) << "\n";
-  	std::cout << "Sum    : " << pretty_time (acc::sum (ac)) << "\n";
-  	std::cout << "Mean   : " << pretty_time (acc::mean (ac)) << "\n";
-  	std::cout << "Min/Max: " << pretty_time (acc::min (ac)) << "-" <<
-  	    pretty_time (acc::max (ac)) << "\n";
-  }
-
-  template <typename Acc>
-  void print_speed (Acc& ac) const
-  {
-    std::cout << "===== Speed =====\n";
-  	// std::cout << "Count  : " << acc::count (ac) << "\n";
-  	// std::cout << "Sum    : " << pretty_speed (acc::sum (ac)) << "\n";
-  	std::cout << "Mean   : " << pretty_speed (acc::mean (ac)) << "\n";
-  	std::cout << "Min/Max: " << pretty_speed (acc::min (ac)) << "-" <<
-  	    pretty_speed (acc::max (ac)) << "\n";
-#endif
-  }
-
-  void print () const { print (msg_size_, time_, speed_); }
 
   inline std::unique_ptr<stats_sample> sample (std::size_t sz = 0);
-
-private:
-  
-  std::mutex mux_;
-  msg_size_type msg_size_;
-  time_type time_;
-  speed_type speed_;
 };
+
+typedef basic_stats<> stats;
 
 class stats_sample
 {
-	friend class stats;
+	template <class> friend class basic_stats;
 
 	stats& stats_;
 	std::size_t size_ = 0;
@@ -221,35 +332,13 @@ public:
   {
   	auto dur = std::chrono::high_resolution_clock::now () - start_;
     
-    if (size_ > 0) 
-    { 
-    	log_size (size_);
-    	log_speed (dur);
-    }
-    log_time (dur);
+    stats_.log (dur, size_);
   }
-
-  template <typename Duration>
-  void log_speed (Duration const& dur)
-  {
-  	stats_.log_speed (std::chrono::duration_cast<std::chrono::duration<double>> (dur), size_);
-  }
-
-  template <typename Duration>
-  void log_time (Duration const& dur)
-  {
-  	stats_.log_time (dur);
-  }
-
-  void log_size (std::size_t const& sz)
-  {
-  	stats_.log_size (sz);
-  }
-
 };
 
+template <typename Clock>
 inline std::unique_ptr<stats_sample> 
-stats::sample (std::size_t sz)
+basic_stats<Clock>::sample (std::size_t sz)
 { 
 	return std::unique_ptr<stats_sample> (
 	  new stats_sample (*this, sz)); 

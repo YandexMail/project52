@@ -14,10 +14,14 @@ struct message_generator
   //  data_type;
   typedef index::index_type::value_type data_type;
 
-  message_generator( iterator first, iterator const& last )
+  message_generator( iterator first, iterator const& last)
   // : shuffled (last-first)
   {
-    while (first != last) shuffled.push_back (first++);
+    assert (first != last);
+
+    while (first != last) 
+      shuffled.push_back (first++);
+
     std::random_shuffle (shuffled.begin (), shuffled.end ());
     i = shuffled.begin ();
   

@@ -107,8 +107,16 @@ public:
 
   typedef typename index_type::const_iterator const_iterator;
 
-  const_iterator begin () { return index_.begin (); }
-  const_iterator   end () { return index_.end (); }
+  const_iterator begin () const { return index_.begin (); }
+  const_iterator   end () const { return index_.end (); }
+
+  const_iterator lower_bound (std::size_t const& n) const 
+  { return index_.lower_bound (n); }
+
+  const_iterator upper_bound (std::size_t const& n) const 
+  { return index_.upper_bound (n); }
+
+
 
   template <typename X>
   const_iterator find (X&& x)
