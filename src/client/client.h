@@ -96,22 +96,32 @@ public:
     ));
   }
 
-  void do_connect (tcp::resolver::iterator endpoint_iterator)
+  void do_connect (tcp::resolver::iterator const& endpoint_iterator,
+      std::size_t const& tries = 0)
   {
-    auto self = this->shared_from_this ();
     sync_->connect (socket_, endpoint_iterator, strand_.wrap (
-      [this, self] (boost::system::error_code const& err,
-        asio::ip::tcp::resolver::iterator const& ep)
-      {
-        if (! err) {
-        	// std::cout << "Connected to " << (ep->endpoint ()) << "\n";
-          state_machine_.process_event (ev_connected (ep->endpoint ()));  	
-        } else
+      y::utility::capture (
+        [this, endpoint_iterator, tries] (
+          std::shared_ptr<client>& self,
+          boost::system::error_code const& err,
+          asio::ip::tcp::resolver::iterator const& ep)
         {
-          std::cout << "Error 2: " << err.message () << "\n";
-          state_machine_.process_event (ev_error (err));
-        }
-      }
+          if (! err) {
+            // std::cout << "Connected to " << (ep->endpoint ()) << "\n";
+            state_machine_.process_event (ev_connected (ep->endpoint ()));  	
+          } else if (tries < 100 &&
+              err == boost::system::errc::address_not_available)
+          {
+            do_connect (endpoint_iterator, tries+1);
+          }
+          else
+          {
+            std::cout << "Error 2: " << err.message () << "\n";
+            state_machine_.process_event (ev_error (err));
+          }
+        },
+        this->shared_from_this ()
+      )
     ));
   }
 
