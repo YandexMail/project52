@@ -7,6 +7,10 @@
 struct ev_resolved 
 {
 	boost::asio::ip::tcp::resolver::iterator endpoints;
+  
+  ev_resolved () = default;
+  ev_resolved& operator= (ev_resolved const&) = default;
+
 	ev_resolved (boost::asio::ip::tcp::resolver::iterator const& epi)
 	  : endpoints (epi)
 	{}

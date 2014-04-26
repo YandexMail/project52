@@ -47,7 +47,8 @@ int main (int ac, char* av[])
 
     for (int i=0; i<atoi(av[2]); ++i)
     {
-      io_mod->create<client_type> (io_service, i, av[4], av[5], mgen, std::ref (stats));
+      io_mod->create<client_type> (io_service, i, av[4], av[5], mgen, 
+          std::ref (stats), 1000);
     }
 
  //   std::thread thr1 ([&io_service] { io_service.run (); abort (); });

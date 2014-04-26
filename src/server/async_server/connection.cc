@@ -12,7 +12,7 @@ void Connection::start() {
 
 Connection::~Connection ()
 {
-  std::cout << "Connection destroyed\n";
+  // std::cout << "Connection destroyed\n";
 }
 
 void Connection::writeGreeting() {
@@ -115,7 +115,7 @@ void Connection::handleData(const boost::system::error_code& ec, std::size_t byt
 		return;
 	}
 	sent_ = bytes;
-#if 1
+#if 0
     try {
       std::istream s(&inBuf);
       if( rfc822::parse(s) ) {
@@ -131,7 +131,7 @@ void Connection::handleData(const boost::system::error_code& ec, std::size_t byt
     inBuf.consume (inBuf.size ());
 #else
     	inBuf.consume (inBuf.size ());
-            dataReply();
+      dataReply();
 #endif
 }
 

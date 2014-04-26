@@ -31,7 +31,8 @@ public:
       std::string const& server, 
       std::string const& port, message_generator& mgen,
       p52::stats& stats,
-      std::size_t max_messages = 0)
+      std::size_t const& session_messages = 0,
+      std::size_t const& max_messages = 0)
     : sync_ (sync)
     , id_ (id)
     , server_ (server)
@@ -39,7 +40,7 @@ public:
     , strand_ (io_service)
     , resolver_ (io_service)
     , socket_ (io_service)
-    , state_machine_ (this, mgen, max_messages)
+    , state_machine_ (this, mgen, session_messages, max_messages)
     , stats_ (stats)
   {
     // std::cout << "creating client #" << id_ << "\n";
@@ -79,7 +80,7 @@ public:
 	{
     tcp::resolver::query query (server_, port_);
     auto self = this->shared_from_this ();
-    sync_->resolve (resolver_, query, 
+    sync_->resolve (resolver_, query, strand_.wrap (
       [this, self] (boost::system::error_code const& err, 
         tcp::resolver::iterator const& endpoint_iterator)
       {
@@ -92,18 +93,18 @@ public:
           state_machine_.process_event (ev_error (err));
         }
       }
-    );
+    ));
   }
 
   void do_connect (tcp::resolver::iterator endpoint_iterator)
   {
     auto self = this->shared_from_this ();
-    sync_->connect (socket_, endpoint_iterator, 
+    sync_->connect (socket_, endpoint_iterator, strand_.wrap (
       [this, self] (boost::system::error_code const& err,
         asio::ip::tcp::resolver::iterator const& ep)
       {
         if (! err) {
-        	std::cout << "Connected to " << (ep->endpoint ()) << "\n";
+        	// std::cout << "Connected to " << (ep->endpoint ()) << "\n";
           state_machine_.process_event (ev_connected (ep->endpoint ()));  	
         } else
         {
@@ -111,7 +112,7 @@ public:
           state_machine_.process_event (ev_error (err));
         }
       }
-    );
+    ));
   }
 
   void do_close ()
@@ -160,11 +161,10 @@ std::cout << "bufseq size="
 #if 0
 std::cout << "sent to server " << bytes << " bytes\n";
 #endif
-      auto self = this->shared_from_this ();
       response_parser_.reset ();
-      this->parse_response (
-        [this, self] (boost::system::error_code const& err, 
-                        server_response const& r) 
+      this->parse_response (y::utility::capture (
+        [this] (std::shared_ptr<client>& self, 
+          boost::system::error_code const& err, server_response const& r) 
         { 
           if (err)
           {
@@ -183,8 +183,9 @@ std::cout << "sent to server " << bytes << " bytes\n";
           	std::cout << "got from server: " << r.code << ": " << r.msg << "\n";
             state_machine_.process_event (ev_error (r));
           }
-        }
-      );
+        },
+        this->shared_from_this ()
+      ));
     } 
     else
     {
@@ -197,8 +198,6 @@ private:
   template <typename Handler>
   void parse_response (Handler handler)
   {
-	  auto self = this->shared_from_this ();
-
   	sync_->read_some (socket_, asio::buffer (buffer_), strand_.wrap (
   	  y::utility::capture (
         [this] (Handler& handler, std::shared_ptr<client>& self, 
@@ -240,7 +239,7 @@ private:
           }
         },
         std::forward<Handler> (handler),
-        std::move (self)
+        this->shared_from_this ()
       )
     ));
   }

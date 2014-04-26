@@ -37,12 +37,18 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
 	Client* client_;
   message_generator mgen_;
 
-  std::size_t max_messages = 0;
-  std::size_t sent_messages = 1;
+  std::size_t msgs_per_session = 0;
+  std::size_t msgs_total = 0;
+
+  std::size_t sent_in_session = 1;
+  std::size_t sent_total = 1;
 
   smtp_msm_ (Client* client, 
-      message_generator const& mgen, std::size_t mm = 0) 
-    : client_ (client), mgen_ (mgen), max_messages (mm)
+      message_generator const& mgen, std::size_t mps = 0, std::size_t mt = 0) 
+    : client_ (client)
+    , mgen_ (mgen)
+    , msgs_per_session (mps)
+    , msgs_total (mt)
   {
   }
 
@@ -64,10 +70,19 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
 
   struct Connect : public msm::front::state <>
   {
+    ev_resolved hashed;
+
     template <class Event, class FSM>
-    void on_entry (Event const& ev, FSM& fsm) const
+    void on_entry (Event const& ev, FSM& fsm) 
     { 
+      hashed = ev;
    		fsm.client ().do_connect (ev.endpoints);
+   	}
+     
+    template <class FSM>
+    void on_entry (boost::any const& ev, FSM& fsm) 
+    { 
+   		fsm.client ().do_connect (hashed.endpoints);
    	}
   };
 
@@ -220,7 +235,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class Event, class FSM>
     void on_entry (Event const&, FSM& fsm) const
     { 
-      std::cout << "entering 'Quit' state\n";
+      // std::cout << "entering 'Quit' state\n";
       fsm.client ().send_and_parse_response (
         "quit\r\n"
       );
@@ -232,7 +247,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class Event, class FSM>
     void on_entry (Event const&, FSM& fsm) const 
     { 
-      std::cout << "entering 'Close' state\n";
+      // std::cout << "entering 'Close' state\n";
       fsm.client ().do_close ();
     }
   };
@@ -254,27 +269,30 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class EVT,class FSM,class SourceState,class TargetState>
     void operator() (EVT const&, FSM& fsm, SourceState&, TargetState&) const
     {
-      ++fsm.sent_messages;
+      ++fsm.sent_in_session;
+      ++fsm.sent_total;
 
      // std::cout << "*** sent_messages now = " << fsm.sent_messages << "\n";
     }
   };
 
-  struct check_finish 
+  struct can_send_more_messages 
   {
     template <class EVT,class FSM,class SourceState,class TargetState>
     bool operator() (EVT const&, FSM const& fsm, SourceState&, TargetState&) const
     {
-      return fsm.max_messages && fsm.sent_messages >= fsm.max_messages;
+      return ! fsm.msgs_per_session 
+          || fsm.sent_in_session < fsm.msgs_per_session;
     }
   };
 
-  struct check_resume 
+  struct can_open_next_session 
   {
     template <class EVT,class FSM,class SourceState,class TargetState>
     bool operator() (EVT const&, FSM const& fsm, SourceState&, TargetState&) const
     {
-      return ! fsm.max_messages || fsm.sent_messages < fsm.max_messages;
+      return ! fsm.msgs_total 
+          || fsm.sent_total < fsm.msgs_total;
     }
   };
 
@@ -296,11 +314,14 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
 //  , Row < StartTLS     , ev_error      , Quit                                >
 
   , Row < MessageSend  , ev_ready , Quit                                       >
-  , Row < MessageSend  , ev_ready , MessageSend , adjust_sent , check_resume   >
+  , Row < MessageSend  , ev_ready , MessageSend , adjust_sent ,
+                                                      can_send_more_messages   >
   , Row < MessageSend  , ev_error , Quit                                       >
 
   , Row < Quit         , boost::any    , Close                                 >
   , Row < Close        , boost::any    , Destroy                               >
+  , Row < Close        , boost::any    , Connect, none,
+                                                      can_open_next_session    >
   > {};
 
   // Replaces the default no-transition response.

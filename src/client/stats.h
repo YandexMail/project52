@@ -4,6 +4,8 @@
 #include <iostream>
 #include <sstream>
 #include <chrono>
+#define BOOST_CHRONO_DONT_PROVIDES_DEPRECATED_IO_SINCE_V2_0_0 1
+#include <boost/chrono.hpp>
 #include <mutex>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
@@ -24,14 +26,56 @@ namespace tag = boost::accumulators::tag;
 
 using boost::format;
 
-namespace chrono = std::chrono;
+namespace chrono = boost::chrono;
 
 namespace {
 
+template <typename Rep, typename Period>
+inline std::string
+pretty_duration (chrono::duration<Rep,Period> const& d)
+{
+  std::string ret = {""};
+
+  auto secs = chrono::duration_cast<chrono::seconds> (d).count ();
+
+  { // seconds
+    std::stringstream os;
+    os << std::setfill ('0') << std::setw (2) << (secs%60);
+    ret = os.str () + ret;
+    secs /= 60;
+  }
+
+  { // minutes
+    std::stringstream os;
+    os << std::setfill ('0') << std::setw (2) << (secs%60) << ':';
+    ret = os.str () + ret;
+    secs /= 60;
+  }
+
+  { // hours
+    std::stringstream os;
+    os << std::setfill ('0') << std::setw (2) << (secs%60) << ':';
+    ret = os.str () + ret;
+    secs /= 24;
+  }
+
+  if (secs) 
+  { // days
+    std::stringstream os;
+    os << secs << 'd';
+    ret = os.str () + ret;
+  }
+
+  return ret;
+}
+
+template <typename T>
 inline std::string 
-pretty_count (std::size_t c)
+pretty_count (T c)
 {
   std::string ret = { "" };
+
+  if (!c) return "-";
 
   while (c)
   {
@@ -48,12 +92,23 @@ pretty_count (std::size_t c)
   return ret;
 }
 
+template <typename T>
 inline std::string 
-size_units (std::size_t const& sz)
+size_units (T const& sz)
 {
 	float val = 1.0 * sz;
 	char const* unit = "";
-	if (sz >= 1024UL*1024*1024*1024)
+	if (sz >= 1024ULL*1024*1024*1024*1024*1024)
+  {
+  	val /= 1024ULL * 1024 * 1024 * 1024 * 1024 * 1024;
+  	unit = "EB";
+  }
+	else if (sz >= 1024ULL*1024*1024*1024*1024)
+  {
+  	val /= 1024ULL * 1024 * 1024 * 1024 * 1024;
+  	unit = "PB";
+  }
+	else if (sz >= 1024UL*1024*1024*1024)
   {
   	val /= 1024UL * 1024 * 1024 * 1024;
   	unit = "TB";
@@ -132,7 +187,7 @@ class basic_stats : boost::noncopyable
 	      acc::stats<tag::sum, tag::mean, tag::min, tag::max>>
 	      msg_size_type;
 
-	typedef acc::accumulator_set<std::chrono::high_resolution_clock::duration::rep, 
+	typedef acc::accumulator_set<chrono::high_resolution_clock::duration::rep, 
 	      acc::stats<tag::sum, tag::min, tag::max>>
 	      time_type;
 
@@ -147,17 +202,28 @@ class basic_stats : boost::noncopyable
 	  time_type     time;
 	  speed_type    speed;
   };
-
   mutable std::mutex mux_;
 
   // configuration
-  duration_type delta_size_ = chrono::seconds (15);
   std::size_t   max_slots_ = 60;
+  duration_type delta_size_ = chrono::seconds (15);
 
   time_point last_slot_ = time_point::min ();
   boost::circular_buffer<acc_type> samples_;
 
-  
+  // total stats.
+  bool start_time_set_ = false;
+  chrono::system_clock::time_point start_time_;
+
+  unsigned long long total_messages_ = 0;
+  unsigned long long total_size_ = 0;
+
+  static inline constexpr chrono::system_clock::duration 
+  defer_total_calculations () 
+  {
+    return chrono::seconds (15);
+  }
+
   void
   roll_acc (time_point const& now = clock_type::now ())
   {
@@ -170,18 +236,38 @@ class basic_stats : boost::noncopyable
 
     if (slots > 0)
     {
+      auto sys_now = chrono::system_clock::now ();
+
+      if (!start_time_set_)
+      {
+        start_time_ = sys_now;
+        start_time_set_ = true;
+      }
+
+      bool has_samples = !samples_.empty ();
+
+      if (has_samples && sys_now - start_time_ > 
+            defer_total_calculations ())
+      {
+        acc_type const& accu = samples_[0];
+        total_messages_ += accu.count;
+        total_size_ += acc::sum (accu.size);
+      }
+
       print ();
 
-      if (samples_.empty ()) samples_.push_back (acc_type ());
-      else samples_.rinsert (samples_.begin (), slots, acc_type ());
+      if (has_samples) samples_.rinsert (samples_.begin (), slots, acc_type ());
+      else samples_.push_back (acc_type ());
 
       last_slot_ = now;
     }
   }
 
 public:
-  basic_stats (std::size_t max_slots = 60)
+  basic_stats (std::size_t max_slots = 240, 
+               duration_type const& ds = chrono::seconds (15))
     : max_slots_ (max_slots)
+    , delta_size_ (ds)
     , samples_ (max_slots)
   {}
   template <typename Rep, typename Period>
@@ -205,14 +291,25 @@ public:
     accu.speed (1.0 * size / dur_double);
   }
 
-  void print ()
+  void print (time_point const& now = clock_type::now ())
   {
     std::cout <<
 "===========================================================================\n";
 
+    print (240, "1 hour"); std::cout << "\n";
     print (60, "15 min"); std::cout << "\n";
     print (20, " 5 min"); std::cout << "\n";
     print ( 4, " 1 min"); std::cout << "\n";
+    std::cout << "Started at " 
+      << chrono::time_fmt(chrono::timezone::local, "%A %B %e, %Y %r") 
+      << start_time_ 
+      << ", worked for " 
+      << pretty_duration (chrono::system_clock::now () - start_time_)
+      << "\n";
+    std::cout 
+      << "Processed messages: " << pretty_count (total_messages_)
+      << ", total size: " << pretty_size (total_size_)
+      << "\n";
   }
 
   void print (std::size_t deltas, char const* label = "") const
@@ -280,11 +377,11 @@ public:
       rps = 0.0;
     }
 
-    std::cout << format (" %1$6s ") % label 
+    std::cout << format (" %1$6s  ") % label 
       << "=== Message Size ===  == Response Times ==  === Processing Speed ===\n";
 
   	std::cout << "Count  : " 
-  	          << format ("%1$20s                       %2$20.2f RPS\n") 
+  	          << format ("%1$20s                        %2$20.2f RPS\n") 
   	             % pretty_count (count)
   	             % rps;
 
@@ -292,12 +389,12 @@ public:
   	             % pretty_size (size_sum)
   	             % pretty_time (time_sum);
 
-  	std::cout << format ("Average: %1$20s  %2$20s     %3$20s\n")
+  	std::cout << format ("Average: %1$20s  %2$20s      %3$20s\n")
   	             % pretty_size (size_avg)
   	             % pretty_time (time_avg)
   	             % pretty_speed (speed_avg);
 
-  	std::cout << format ("Min/Max:  %1$8s - %2$8s   %3$8s - %4$8s  %5$10s - %6$10s\n")
+  	std::cout << format ("Min/Max:  %1$8s - %2$8s   %3$8s - %4$8s   %5$10s - %6$10s\n")
   	             % pretty_size (size_min)   % pretty_size (size_max)
   	             % pretty_time (time_min)   % pretty_time (time_max)
   	             % pretty_speed (speed_min) % pretty_speed (speed_max);
@@ -315,12 +412,12 @@ class stats_sample
 
 	stats& stats_;
 	std::size_t size_ = 0;
-	std::chrono::high_resolution_clock::time_point start_; 
+	chrono::high_resolution_clock::time_point start_; 
 
 	stats_sample (stats& s, std::size_t const& sz = 0) 
 	  : stats_ (s)
 	  , size_ (sz)
-	  , start_ (std::chrono::high_resolution_clock::now ())
+	  , start_ (chrono::high_resolution_clock::now ())
 	{
   }
 public:
@@ -330,7 +427,7 @@ public:
 
   ~stats_sample ()
   {
-  	auto dur = std::chrono::high_resolution_clock::now () - start_;
+  	auto dur = chrono::high_resolution_clock::now () - start_;
     
     stats_.log (dur, size_);
   }
