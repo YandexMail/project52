@@ -12,7 +12,7 @@ namespace p52 {
 namespace mbox {
 
 namespace { 
-const unsigned int PAGE_SIZE = getpagesize ();
+const unsigned int page_size = getpagesize ();
 }
 
 class mmap 
