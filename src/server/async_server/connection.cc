@@ -1,5 +1,4 @@
 #include "connection.h"
-#include <vector>
 #include <boost/bind.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include "../common/rfc822.h"
@@ -18,7 +17,6 @@ Connection::~Connection ()
 void Connection::writeGreeting() {
     std::ostream os(&outBuf);
     os << "220 smtp11.mail.yandex.net async_server SMTP\r\n" << std::flush;
-if (outBuf.size () > 100) std::cout << "(6) outBuf.size = " << outBuf.size () << "\n";
     boost::asio::async_write(socket(), outBuf, strand_.wrap (
             boost::bind(&Connection::handleGreetingWrite, shared_from_this(),
                     boost::asio::placeholders::error,
@@ -26,7 +24,6 @@ if (outBuf.size () > 100) std::cout << "(6) outBuf.size = " << outBuf.size () <<
 }
 
 void Connection::handleGreetingWrite(const boost::system::error_code& e, std::size_t bytes) {
-if (bytes > 100) std::cout << "(1) bytes = " << bytes << "\n";
     if (! e) readCommand();
     else std::cout << "Connection::handleGreetingWrite: " << e.message () << "\n";
 }
@@ -73,7 +70,6 @@ void Connection::handleCommand(const boost::system::error_code& e) {
 void Connection::commandReply( const std::string & msg ) {
     std::ostream os(&outBuf);
     os << msg << std::flush;
-if (outBuf.size () > 100) std::cout << "(2) outBuf.size = " << outBuf.size () << "\n";
     boost::asio::async_write(socket(), outBuf, strand_.wrap (
                 boost::bind(&Connection::handleCommandReplyWrite, shared_from_this(),
                         boost::asio::placeholders::error,
@@ -89,7 +85,6 @@ void Connection::handleCommandReplyWrite(const boost::system::error_code& e, std
 void Connection::writeDataGreeting() {
     std::ostream os(&outBuf);
     os << "354 Enter mail, end with \".\" on a line by itself (" << sent_ << ")\r\n" << std::flush;
-if (outBuf.size () > 100) std::cout << "(3) outBuf.size = " << outBuf.size () << "\n";
     boost::asio::async_write(socket(), outBuf, strand_.wrap (
             boost::bind(&Connection::handleDataGreetingWrite, shared_from_this(),
                     boost::asio::placeholders::error,
@@ -138,7 +133,6 @@ void Connection::handleData(const boost::system::error_code& ec, std::size_t byt
 void Connection::dataReply( const std::string & msg ) {
     std::ostream os(&outBuf);
     os << msg << std::flush;
-if (outBuf.size () > 100) std::cout << "(4) outBuf.size = " << outBuf.size () << "\n";
     boost::asio::async_write(socket(), outBuf, strand_.wrap (
                 boost::bind(&Connection::handleDataReply, shared_from_this(),
                     boost::asio::placeholders::error,
@@ -156,7 +150,6 @@ void Connection::handleDataReply(const boost::system::error_code& e, std::size_t
 void Connection::writeGoodbye() {
     std::ostream os(&outBuf);
     os << "221 smtp11.mail.yandex.net async_server SMTP\r\n" << std::flush;
-if (outBuf.size () > 100) std::cout << "(5) outBuf.size = " << outBuf.size () << "\n";
     boost::asio::async_write(socket(), outBuf, strand_.wrap (
             boost::bind(&Connection::handleWriteGoodbye, shared_from_this(),
                     boost::asio::placeholders::error,
