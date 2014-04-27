@@ -1,8 +1,8 @@
 #ifndef P52_SERVER_COMMON_RFC822_H_
 #define P52_SERVER_COMMON_RFC822_H_
 
-#define BOOST_SPIRIT_THREADSAFE
-#define PHOENIX_THREADSAFE
+// #define BOOST_SPIRIT_THREADSAFE
+// #define PHOENIX_THREADSAFE
 #include <boost/spirit/include/classic.hpp>
 
 #include "../../rfc822/rfc822.h"
