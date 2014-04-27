@@ -115,7 +115,7 @@ void Connection::handleData(const boost::system::error_code& ec, std::size_t byt
 		return;
 	}
 	sent_ = bytes;
-#if 0
+#if 1
     try {
       std::istream s(&inBuf);
       if( rfc822::parse(s) ) {
