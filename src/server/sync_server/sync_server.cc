@@ -1,3 +1,6 @@
+#define BOOST_SPIRIT_THREADSAFE
+#define PHOENIX_THREADSAFE
+
 #include <cstdlib>
 #include <iostream>
 #include <thread>
