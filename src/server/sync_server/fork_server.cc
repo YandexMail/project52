@@ -48,14 +48,19 @@ void start_accept (tcp::acceptor& acceptor, asio::signal_set& sig,
     {
       if (! ec)
       {
+std::cout << "start_accept: forking...\n";
         io_service.notify_fork (asio::io_service::fork_prepare);
         switch (fork ())
         {
           case 0: 
+          {
             io_service.notify_fork (asio::io_service::fork_child);
             acceptor.close ();
             sig.cancel ();
-            std::exit (session (std::move (socket)));
+            int ret = session (std::move (socket));
+            abort ();
+            exit (ret);
+          }
 
           default:
             io_service.notify_fork (asio::io_service::fork_parent);
@@ -64,7 +69,7 @@ void start_accept (tcp::acceptor& acceptor, asio::signal_set& sig,
             break;
 
           case -1:
-            std::cerr << "fork error\n";
+            std::cerr << "fork error: " << errno << "\n";
             abort ();
         }
       }
