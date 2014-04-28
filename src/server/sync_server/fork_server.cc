@@ -7,9 +7,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <boost/algorithm/string/predicate.hpp>
-#include "../common/rfc822.h"
-
 #include "session.h"
 
 namespace asio = boost::asio;
