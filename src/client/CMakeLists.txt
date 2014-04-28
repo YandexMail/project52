@@ -29,6 +29,7 @@ find_package(Boost
              thread 
              coroutine
              context
+             program_options 
 REQUIRED)
 
 find_package(ZLib)

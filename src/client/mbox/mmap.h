@@ -35,7 +35,11 @@ public:
 
     fd_ = ::open (file, O_RDONLY);
     if (fd_ == -1)
-      throw std::runtime_error ("cannot open mbox file");
+    {
+    	std::stringstream os;
+    	os << "cannot open mbox file: " << file;
+      throw std::runtime_error (os.str ().c_str ());
+    }
 
     struct ::stat st;
     if (fstat (fd_, &st) == -1)
