@@ -328,6 +328,8 @@ public:
 
     double rps;
 
+    double deltas_period;
+
     using chrono::duration;
     using chrono::duration_cast;
 
@@ -356,6 +358,9 @@ public:
       }
     }
 
+    deltas_period = 
+      duration_cast<duration<double>> (delta_size_ * deltas).count ();
+
     if (count)
     {
       size_avg = 1.0 * size_sum / count;
@@ -365,8 +370,7 @@ public:
       using chrono::duration_cast;
       using chrono::duration;
 
-      rps = 1.0 * count / 
-        duration_cast<duration<double>> (delta_size_ * deltas).count ();
+      rps = 1.0 * count / deltas_period;
     }
     else
     {
@@ -385,9 +389,10 @@ public:
   	             % pretty_count (count)
   	             % rps;
 
-  	std::cout << format ("Sum    : %1$20s  %2$20s\n")
+  	std::cout << format ("Sum    : %1$20s  %2$20s      %3$20s\n")
   	             % pretty_size (size_sum)
-  	             % pretty_time (time_sum);
+  	             % pretty_time (time_sum)
+  	             %pretty_speed (1.0*size_sum/deltas_period);
 
   	std::cout << format ("Average: %1$20s  %2$20s      %3$20s\n")
   	             % pretty_size (size_avg)
