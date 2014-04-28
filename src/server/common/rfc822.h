@@ -4,6 +4,7 @@
 // #define BOOST_SPIRIT_THREADSAFE
 // #define PHOENIX_THREADSAFE
 #include <boost/spirit/include/classic.hpp>
+#include <boost/spirit/include/support_istream_iterator.hpp>
 
 #include "../../rfc822/rfc822.h"
 #include "../../rfc822/rfc2822_grammar.h"
@@ -92,21 +93,22 @@ struct test_actions: public p52::rfc822::rfc2822::null_actions<IteratorT> {
     }
 };
 
+template <typename ForwardIterator>
+inline bool parse(ForwardIterator first, ForwardIterator const& last) {
+    test_actions<ForwardIterator> actions;
+    rfc2822::grammar<test_actions<ForwardIterator> > g(actions);
+
+    return boost::spirit::classic::parse(first, last, g).full;
+}
+
 inline bool parse(std::istream & is) {
-    using namespace boost::spirit;
+    namespace spirit = boost::spirit;
 
-    typedef std::istream::char_type char_t;
-    typedef classic::multi_pass<std::istreambuf_iterator<char_t> > multi_pass_iterator_t;
+    // is.unsetf (std::ios::skipws);
+    spirit::istream_iterator first (is);
+    spirit::istream_iterator last;
 
-    multi_pass_iterator_t in_begin(
-            classic::make_multi_pass(std::istreambuf_iterator<char_t>(is)));
-    multi_pass_iterator_t in_end(
-            classic::make_multi_pass(std::istreambuf_iterator<char_t>()));
-
-    test_actions<multi_pass_iterator_t> actions;
-    rfc2822::grammar<test_actions<multi_pass_iterator_t> > g(actions);
-
-    return boost::spirit::classic::parse(in_begin, in_end, g).full;
+    return parse (first, last);
 }
 
 } //namespace rfc822

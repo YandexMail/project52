@@ -113,6 +113,8 @@ void Connection::handleData(const boost::system::error_code& ec, std::size_t byt
 #if 1
     try {
       std::istream s(&inBuf);
+      s.unsetf (std::ios::skipws);
+
       if( rfc822::parse(s) ) {
           dataReply();
       } else {
