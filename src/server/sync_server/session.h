@@ -137,10 +137,8 @@ int session(tcp::socket sock)
         	command_reply (os, std::string("451 ") + e.what() + "\r\n");
         }
       } else if( boost::algorithm::iequals (line, "QUIT\r") ) {
-      	std::cerr << line << "\n";
-      	std::cerr << "got QUIT, closing connection\n";
+      	// std::cerr << "got QUIT, closing connection\n";
         command_reply (os, "221 Goodbye");
-        abort ();
         return 0;
       } else if( boost::algorithm::istarts_with (line, "HELO") ) {
         command_reply (os);

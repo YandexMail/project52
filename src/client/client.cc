@@ -47,6 +47,7 @@ int main (int ac, char* av[])
 
     for (int i=0; i<atoi(av[2]); ++i)
     {
+      // 1000 messages per session, then quit and new session begins
       io_mod->create<client_type> (io_service, i, av[4], av[5], mgen, 
           std::ref (stats), 1000);
     }

@@ -25,7 +25,10 @@ void start_signal (asio::signal_set& sig, tcp::acceptor& acceptor)
         if (acceptor.is_open ())
         {
           int status = 0;
-          while (waitpid(-1, &status, WNOHANG) > 0) {}
+          while (waitpid(-1, &status, WNOHANG) > 0) 
+          {
+          }
+
           start_signal (sig, acceptor);
         }
       }
@@ -48,7 +51,7 @@ void start_accept (tcp::acceptor& acceptor, asio::signal_set& sig,
     {
       if (! ec)
       {
-std::cout << "start_accept: forking...\n";
+        // std::cout << "start_accept: forking...\n";
         io_service.notify_fork (asio::io_service::fork_prepare);
         switch (fork ())
         {
@@ -58,7 +61,6 @@ std::cout << "start_accept: forking...\n";
             acceptor.close ();
             sig.cancel ();
             int ret = session (std::move (socket));
-            abort ();
             exit (ret);
           }
 
@@ -85,7 +87,7 @@ std::cout << "start_accept: forking...\n";
 void server (asio::io_service& io_service, unsigned short port)
 {
   tcp::acceptor a (io_service, tcp::endpoint(tcp::v4(), port));
-	asio::signal_set sig (io_service);
+	asio::signal_set sig (io_service, SIGCHLD);
   tcp::socket socket (io_service);
 
   start_signal (sig, a);

@@ -84,6 +84,17 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     { 
    		fsm.client ().do_connect (hashed.endpoints);
    	}
+
+   	template <class Event, class FSM>
+    inline void on_exit (Event const&, FSM& fsm)
+    {
+    }
+
+   	template <class FSM>
+    inline void on_exit (ev_connected const&, FSM& fsm)
+    {
+      fsm.sent_in_session = 1;
+    }
   };
 
   struct WaitHelo : public msm::front::state <>
@@ -235,7 +246,10 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     template <class Event, class FSM>
     void on_entry (Event const&, FSM& fsm) const
     { 
-      // std::cout << "entering 'Quit' state\n";
+#if 0
+      std::cout << "entering 'Quit' state, sent in_sess: " 
+          << fsm.sent_in_session << ", total: " << fsm.sent_total << "\n";
+#endif
       fsm.client ().send_and_parse_response (
         "quit\r\n"
       );
@@ -272,14 +286,18 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
       ++fsm.sent_in_session;
       ++fsm.sent_total;
 
-     // std::cout << "*** sent_messages now = " << fsm.sent_messages << "\n";
+#if 0
+      std::cout << "adjust_sent: in_sess: " 
+          << fsm.sent_in_session << ", total: " << fsm.sent_total << "\n";
+#endif
     }
   };
 
   struct can_send_more_messages 
   {
     template <class EVT,class FSM,class SourceState,class TargetState>
-    bool operator() (EVT const&, FSM const& fsm, SourceState&, TargetState&) const
+    inline bool 
+    operator() (EVT const&, FSM const& fsm, SourceState&, TargetState&) const
     {
       return ! fsm.msgs_per_session 
           || fsm.sent_in_session < fsm.msgs_per_session;
@@ -289,7 +307,8 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
   struct can_open_next_session 
   {
     template <class EVT,class FSM,class SourceState,class TargetState>
-    bool operator() (EVT const&, FSM const& fsm, SourceState&, TargetState&) const
+    inline bool 
+    operator() (EVT const&, FSM const& fsm, SourceState&, TargetState&) const
     {
       return ! fsm.msgs_total 
           || fsm.sent_total < fsm.msgs_total;
@@ -315,13 +334,13 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
 
   , Row < MessageSend  , ev_ready , Quit                                       >
   , Row < MessageSend  , ev_ready , MessageSend , adjust_sent ,
-                                                      can_send_more_messages   >
+                                                  can_send_more_messages       >
   , Row < MessageSend  , ev_error , Quit                                       >
 
   , Row < Quit         , boost::any    , Close                                 >
   , Row < Close        , boost::any    , Destroy                               >
   , Row < Close        , boost::any    , Connect, none,
-                                                      can_open_next_session    >
+                                                  can_open_next_session        >
   > {};
 
   // Replaces the default no-transition response.
