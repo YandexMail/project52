@@ -237,7 +237,7 @@ private:
             }
             else
             {
-              std::cout << "incomplete response\n";
+              // std::cout << "incomplete response\n";
               this->parse_response (handler);
             }
           } 
