@@ -7,7 +7,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "zc_session.h"
+#include "session.h"
 
 namespace asio = boost::asio;
 using asio::ip::tcp;

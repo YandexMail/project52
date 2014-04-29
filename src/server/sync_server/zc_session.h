@@ -51,7 +51,6 @@ public:
 	bool operator() (Streambuf* sb) const
 	{
 		std::size_t n = sock_.read_some (sb->prepare (1024));
-		std::cout << "read " << n << " bytes\n";
 		sb->commit (n);
     return true;
   };
@@ -89,13 +88,11 @@ int session(tcp::socket sock)
 
     os << "220 localhost STMP\r\n";
 
-    std::cout << "starting main loop\n";
-
     for (;;)
     {
       std::string line;
       std::getline (is, line);
-      std::cout << "got " << line << "\n";
+      // std::cout << "got " << line << "\n";
 
       if (! is.good () || ! os.good ())
       {
@@ -111,59 +108,12 @@ int session(tcp::socket sock)
 
         
         auto first = ibuf->exp_begin ();
-        auto iter = ibuf->exp_end ();
-        auto last = first;
-
-        // find \r\n.\r\n
-        enum { dflt, cr1, lf1, dot, cr2, lf2 } state;
-        state = dflt;
-        while (is.good () && state != lf2)
-        {
-
-        	std::cout << "state=" << state << ", iter = " << *iter << "\n";
-
-        	switch (*iter)
-        	{
-        		default:
-        		  state = dflt;
-        		  break; 
-
-        		case '\r':
-        		  switch (state)
-              { 
-              	case dot: state = cr2; break;
-              	default: state = cr1; last = iter; break;
-              }
-              break;
-
-            case '.':
-              state = (state == lf1) ? dot : dflt;
-              break;
-
-            case '\n':
-              switch (state)
-              {
-              	default: state = dflt; break;
-              	case cr1: state = lf1; break;
-              	case cr2: state = lf2; break;
-              }
-              break;
-          }
-
-          if (state != lf2) 
-          	++iter;
-        }
-
-        if (state != lf2)
-        {
-          std::cerr << "error during message read\n";
-          return -1;
-        }
+        auto last = ibuf->exp_end ();
 
         try {
           if (rfc822::parse (first, last))
           {
-          	// std::cout << "parse ok\n";
+            ibuf->detach (last.get ());
             command_reply (os);
           }
           else

@@ -69,66 +69,23 @@ int session(tcp::socket sock)
         command_reply (os, 
             "354 Enter mail, end with \".\" on a line by itself");
 
-        namespace spirit = boost::spirit;
-        spirit::istream_iterator first (is);
-        spirit::istream_iterator last, iter (first);
-
-        // find \r\n.\r\n
-        enum { dflt, cr1, lf1, dot, cr2, lf2 } state;
-        state = dflt;
-        while (is.good () && state != lf2)
-        {
-
-        	// std::cout << "state=" << state << ", iter = " << *iter << "\n";
-
-        	switch (*iter)
-        	{
-        		default:
-        		  state = dflt;
-        		  break; 
-
-        		case '\r':
-        		  switch (state)
-              { 
-              	case dot: state = cr2; break;
-              	default: state = cr1; last = iter; break;
-              }
-              break;
-
-            case '.':
-              state = (state == lf1) ? dot : dflt;
-              break;
-
-            case '\n':
-              switch (state)
-              {
-              	default: state = dflt; break;
-              	case cr1: state = lf1; break;
-              	case cr2: state = lf2; break;
-              }
-              break;
-          }
-
-          if (state != lf2) 
-          	++iter;
-        }
-
-        if (state != lf2)
-        {
-          std::cerr << "error during message read\n";
-          return -1;
-        }
-
         try {
-          if (rfc822::parse (first, last))
+          if (rfc822::parse (is))
           {
           	// std::cout << "parse ok\n";
             command_reply (os);
+
+#if 0 // spirit already read \r\n/\r\n and it is no way to put it back
+            // read \r\n.\r\n
+            std::getline (is, line);
+            std::getline (is, line);
+#endif
           }
           else
           {
           	std::cerr << "cannot parse message\n";
             command_reply (os, "451 rfc2822 violation\r\n");
+            return 2;
           }
         } 
         catch (std::exception const& e)

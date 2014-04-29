@@ -185,12 +185,12 @@ struct test_actions: public p52::rfc822::rfc2822::null_actions<IteratorT>
 
   inline void on_body_prefix (data_range_t const& data) const
   {
-    cout << "*** got body prefix\n";
+    cout << "*** got body prefix: >>>" << data << "<<<\n";
   }
 
   inline void on_body (data_range_t const& data) const
   {
-    cout << "*** got body\n";
+    cout << "*** got body: >>>" << data << "<<<\n";
   }
 };
 

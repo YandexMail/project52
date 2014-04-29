@@ -1,5 +1,6 @@
 #ifndef _YIMAP_RFC822_RFC2822_GRAMMAR_H_
 #define _YIMAP_RFC822_RFC2822_GRAMMAR_H_
+
 #include "rfc2822_types.h"
 #include "rfc2822_hooks.h"
 //#include <rfc822/rfc2822_rules.h>
@@ -397,7 +398,7 @@ BOOST_SPIRIT_RULE_PARSER (quoted_string,-,-,-,
 #else
 struct quoted_string_parser: public parser<quoted_string_parser>
 {
-  typedef eol_parser self_t;
+  typedef quoted_string_parser self_t;
   inline quoted_string_parser () {}
 
   template <typename ScannerT>
@@ -1121,6 +1122,102 @@ mime_param_list_p (NameParser const& n, ValueParser const& v)
   return SP::functor_parser <parser> (parser (n, v));
 } 
 //////////////////////////////////////////////////////////////////////////////////
+// match everything until \r\n.\r\n
+struct smtp_body_parser: public parser<smtp_body_parser>
+{
+  typedef smtp_body_parser self_t;
+  // inline smtp_body_parser () {}
+
+  template <typename ScannerT>
+  typename parser_result<self_t, ScannerT>::type
+  parse (ScannerT const& scan) const
+  {
+    typedef typename ScannerT::iterator_t iterator_t;
+
+    iterator_t save = scan.first;
+    iterator_t last;
+    std::size_t len = 0;
+
+    enum { dflt, cr1, lf1, dot, cr2, lf2 } state;
+
+    for (state = dflt; ! scan.at_end (); ++scan)
+    {
+      ++len;
+
+      // std::cout << "state=" << state << ", char=" << *scan << "\n";
+      switch (*scan)
+      {
+        default: state = dflt; break;
+        case '\r':
+          switch (state)
+          {
+            case dot: state = cr2; break;
+            default: state = cr1; last = scan.first; break;
+          }
+          break;
+        case '\n':
+          switch (state)
+          {
+            default: state = dflt; break;
+            case cr1: state = lf1; break;
+            case cr2: state = lf2; break;
+          }
+          break;
+      
+        case '.': state = (state == lf1) ? dot : dflt; break;
+      }
+
+      if (state == lf2) break;
+    }
+
+    if (state == lf2) 
+      return scan.create_match (len-5, nil_t (), save, scan.first = last);
+    else
+      return scan.create_match (len, nil_t (), save, scan.first);
+  }
+};
+
+namespace {
+smtp_body_parser const smtp_body = smtp_body_parser ();
+}
+
+struct smtp_end_parser: public parser<smtp_end_parser>
+{
+  typedef smtp_end_parser self_t;
+  // inline smtp_end_parser () {}
+
+  template <typename ScannerT>
+  typename parser_result<self_t, ScannerT>::type
+  parse (ScannerT const& scan) const
+  {
+    typedef typename ScannerT::iterator_t iterator_t;
+
+    iterator_t save = scan.first;
+    std::size_t len = 0;
+
+    if (scan.at_end () || *scan != '\r') return scan.no_match ();
+    ++len; ++scan;
+
+    if (scan.first == scan.last || *scan != '\n') return scan.no_match ();
+    ++len; ++scan;
+
+    if (scan.first == scan.last || *scan != '.') return scan.no_match ();
+    ++len; ++scan;
+
+    if (scan.first == scan.last || *scan != '\r') return scan.no_match ();
+    ++len; ++scan;
+
+    if (scan.first == scan.last || *scan != '\n') return scan.no_match ();
+    ++len;
+
+    return scan.create_match (len, nil_t (), save, scan.first = scan.last);
+  }
+};
+
+namespace {
+smtp_end_parser const smtp_end = smtp_end_parser ();
+}
+//////////////////////////////////////////////////////////////////////////////////
 // RFC2822 GRAMMAR
 template <class Actions = null_actions<char const*>,
           class ErrorHandler = error_handler>
@@ -1593,12 +1690,18 @@ struct grammar: public SP::grammar<grammar<Actions, ErrorHandler> >
             )
         ;
 
+#if 0 // lot of mail violates this rule.
       body_part = repeat_p(1,998) [text];
-      // body = ! list_p(!body_part, CRLF);
-      body = *anychar_p;
+      body = ! list_p(!body_part, CRLF);
+#else
+      body = smtp_body;
+#endif
+
       top = g ( 
                      header_list_rule [ on_header_list ]
-                  >> ! (CRLF [ on_body_prefix ] >> body [ on_body ])
+                  >> ! (   CRLF [ on_body_prefix ] 
+                        >> body [ on_body ]
+                        >> !smtp_end)
               ) [self.error_handler];
 
 #if PARSER_TIMINGS

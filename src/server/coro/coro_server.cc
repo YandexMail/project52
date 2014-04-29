@@ -1,7 +1,5 @@
 #define BOOST_SPIRIT_THREADSAFE
 #define PHOENIX_THREADSAFE
-
-
 #include <boost/lexical_cast.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>
@@ -37,12 +35,13 @@ public:
       timer_(socket_.get_io_service()),
       strand_(socket_.get_io_service())
   {
+    timer_.expires_from_now(std::chrono::seconds(60));
   }
 
   void go()
   {
-    auto self(shared_from_this());
-    asio::spawn(strand_,
+    auto self (shared_from_this());
+    asio::spawn (strand_,
         [this, self](asio::yield_context yield)
         {
           try
@@ -53,7 +52,8 @@ public:
               -> std::size_t
               { 
                 timer_.expires_from_now(std::chrono::seconds(10));
-                return socket_.async_read_some (buf, yield[ec]);
+                std::size_t n = socket_.async_read_some (buf, yield[ec]);
+                return n;
               }
             );
 
@@ -158,7 +158,7 @@ public:
                   command_reply (os, std::string("451 ") + e.what() + "\r\n");
                 }
               } else if( boost::algorithm::iequals (line, "QUIT\r") ) {
-                // std::cerr << "got QUIT, closing connection\n";
+                std::cerr << "got QUIT, closing connection\n";
                 command_reply (os, "221 Goodbye");
                 break;
               } else if( boost::algorithm::istarts_with (line, "HELO") ) {
@@ -180,7 +180,13 @@ public:
           	std::cerr << "exception: " << e.what () << "\n";
             socket_.close();
             timer_.cancel();
+            abort ();
           }
+
+          std::cout << "connection closed\n";
+
+          socket_.close();
+          timer_.cancel();
         });
 
     asio::spawn(strand_,
@@ -190,8 +196,7 @@ public:
           {
             boost::system::error_code ignored_ec;
             timer_.async_wait(yield[ignored_ec]);
-            if (timer_.expires_from_now() <= std::chrono::seconds(0))
-              socket_.close();
+            socket_.close();
           }
         });
   }

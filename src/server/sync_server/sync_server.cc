@@ -10,7 +10,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include "../common/rfc822.h"
 
-#include "zc_session.h"
+#include "session.h"
 
 namespace asio = boost::asio;
 using asio::ip::tcp;

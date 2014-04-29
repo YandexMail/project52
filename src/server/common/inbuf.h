@@ -11,7 +11,7 @@ private:
     static const std::streamsize        pb_size;
 
     enum
-    { bf_size = 16 };
+    { bf_size = 1024 };
 
     int fetch_()
     {
