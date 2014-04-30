@@ -378,9 +378,8 @@ public:
         iteratorT<T>::type (fragments_, this->gptr (), this->egptr (), true);
     else
 #endif
-			assert (this->gptr () == this->pptr ());
       return typename 
-        iteratorT<T>::type (fragments_, this->pptr (), true);
+        iteratorT<T>::type (fragments_, put_active (), this->pptr (), true);
   }
 
   iterator begin () const { return beginT<char_type> (); }

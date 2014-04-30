@@ -54,10 +54,21 @@ private:
 
   bool equal (exp_iterator const& other) const
   {
-    if (!end_ && other.end_ && i_ == buf_->end())
-      buf_->invoke_underflow_handler();
+    if (!end_ && other.end_)
+    {
+      if (i_ == buf_->end()) // <- optimze
+      {
+        buf_->invoke_underflow_handler();
+      }
+    }
+
     iterator_t lh = end_ ? buf_->end() : i_;
-    iterator_t rh = other.end_ ? other.buf_->end() : other.i_;
+    iterator_t rh;
+    
+    if (other.end_) // <-
+      rh = other.buf_->end(); // <- optimize
+    else 
+      rh = other.i_;
 
     return lh == rh;
   }

@@ -42,6 +42,24 @@ public:
   iterator () : after_last_frag_ (false) {}
 
   iterator (fragment_list const& segm_seq, 
+            fragment_iterator const& cur_seg,
+            skip_iterator const& cur_val,
+            bool end_iterator = false)
+    : fragment_list_ (&segm_seq)
+    , cur_seg_ (cur_seg)
+    , cur_val_ (cur_val)
+    , after_last_frag_ (frag_list ().empty () || cur_val == (*cur_seg_)->end())
+  {
+    // assert (! frag_list ().empty ());
+
+    if (end_iterator && !frag_list ().empty ())
+    {
+      assert(cur_seg_ != frag_list ().end());
+      after_last_frag_ = (cur_val == (*cur_seg_)->end());
+    }
+  }
+
+  iterator (fragment_list const& segm_seq, 
             skip_iterator const& cur_val,
             bool end_iterator = false)
     : fragment_list_ (&segm_seq)
