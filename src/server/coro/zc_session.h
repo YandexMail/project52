@@ -183,9 +183,10 @@ public:
         {
           while (socket_.is_open())
           {
-            boost::system::error_code ignored_ec;
-            timer_.async_wait(yield[ignored_ec]);
-            socket_.close();
+            boost::system::error_code ec;
+            timer_.async_wait(yield[ec]);
+            if (ec != boost::system::errc::operation_canceled)
+              socket_.close();
           }
         });
   }
