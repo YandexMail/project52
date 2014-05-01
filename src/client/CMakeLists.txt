@@ -35,8 +35,7 @@ REQUIRED)
 find_package(ZLib)
 
 include_directories(${Boost_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIR})
-include_directories("/home/nikki/yamail/include")
-include_directories("/Users/nikki/Work/github/yamail/include")
+include_directories("../../yamail/include")
 include_directories(".")
 
 set(CMAKE_CXX_FLAGS 
