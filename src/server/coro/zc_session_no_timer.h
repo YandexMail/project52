@@ -69,15 +69,15 @@ class session : public std::enable_shared_from_this<session>
 {
 public:
   explicit session(tcp::socket socket)
-    : socket_(std::move(socket)),
-      strand_(socket_.get_io_service())
+    : socket_(std::move(socket))
+    , io_service_ (socket_.get_io_service ())
   {
   }
 
   void go()
   {
     auto self (shared_from_this());
-    asio::spawn (strand_,
+    asio::spawn (io_service_,
         [this, self](asio::yield_context yield)
         {
           try
@@ -173,6 +173,6 @@ public:
 
 private:
   tcp::socket socket_;
-  asio::io_service::strand strand_;
+  asio::io_service& io_service_;
 };
 

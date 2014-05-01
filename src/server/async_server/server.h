@@ -12,7 +12,8 @@
 class Server: private boost::noncopyable {
 public:
     explicit Server(const std::string& address, const std::string& port,
-            std::size_t threadsCount, std::size_t servicesCount);
+            std::size_t threadsCount, std::size_t servicesCount,
+            std::size_t cpu_cores = 0, std::size_t cpu_ht_groups = 0);
 
     void run() {
         startAccept();

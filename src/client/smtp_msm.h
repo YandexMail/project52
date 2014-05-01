@@ -293,17 +293,6 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     }
   };
 
-  struct can_send_more_messages 
-  {
-    template <class EVT,class FSM,class SourceState,class TargetState>
-    inline bool 
-    operator() (EVT const&, FSM const& fsm, SourceState&, TargetState&) const
-    {
-      return ! fsm.msgs_per_session 
-          || fsm.sent_in_session < fsm.msgs_per_session;
-    }
-  };
-
   struct can_open_next_session 
   {
     template <class EVT,class FSM,class SourceState,class TargetState>
@@ -312,6 +301,20 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     {
       return ! fsm.msgs_total 
           || fsm.sent_total < fsm.msgs_total;
+    }
+  };
+
+  struct can_send_more_messages 
+  {
+    template <class EVT,class FSM,class SourceState,class TargetState>
+    inline bool 
+    operator() (EVT const& evt, FSM const& fsm, 
+        SourceState& ss, TargetState& ts) const
+    {
+      return can_open_next_session () (evt, fsm, ss, ts) 
+        && (! fsm.msgs_per_session 
+            || fsm.sent_in_session < fsm.msgs_per_session)
+      ;
     }
   };
 

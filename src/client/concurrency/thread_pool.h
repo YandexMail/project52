@@ -6,12 +6,16 @@
 #include <utility>
 #include <memory>
 #include <vector>
+#include <set>
+#include <common/affinity.h>
 
 class thread_pool
 {
 public:
-  explicit thread_pool (std::size_t threads = 1, std::size_t reactors = 1)
+  explicit thread_pool (std::size_t threads = 1, std::size_t reactors = 1,
+    std::size_t cpu_cores = 0, std::size_t cpu_ht_groups = 0)
     : threads_ (threads), next_io_service_(0)
+    , cpu_cores_ (cpu_cores), cpu_ht_groups_ (cpu_ht_groups)
   {
     if (reactors == 0)
       throw std::runtime_error("io_service_pool size is 0");
@@ -32,12 +36,25 @@ public:
 
   void run ()
   {
+    int cpu = 0;
+
     std::vector<std::shared_ptr<boost::thread> > threads;
     for (std::size_t i = 0; i < threads_ * io_services_.size(); ++i)
     {
       auto thread = std::make_shared<boost::thread> (
           boost::bind(&asio::io_service::run, &(get_io_service ()))
       );
+
+      if (cpu_cores_ > 0)
+      {
+        std::set<std::size_t> cpus;
+        for (int h=0; h<cpu_ht_groups_; ++h)
+        {
+          cpus.insert (cpu);
+          if (++cpu >= cpu_cores_) cpu = 0;
+        }
+        bind_to_cpu (*thread, cpus);
+      }
 
       threads.push_back(thread);
     }
@@ -87,5 +104,8 @@ private:
   std::vector<work_ptr> works_;
 
   std::size_t next_io_service_;
+
+  std::size_t cpu_cores_;
+  std::size_t cpu_ht_groups_;
 };
 #endif // _P52_CONCURRENCY_THREAD_POOL_H_

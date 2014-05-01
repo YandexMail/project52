@@ -15,6 +15,7 @@ REQUIRED)
 set(CMAKE_CXX_FLAGS 
   "${CMAKE_CXX_FLAGS} -std=c++11 -DBOOST_SPIRIT_THREADSAFE -DPHOENIX_THREADSAFE")
 include_directories(${Boost_INCLUDE_DIRS})
+include_directories(..)
 file(GLOB_RECURSE SOURCES "*.cc")
 
 # Add test executable target

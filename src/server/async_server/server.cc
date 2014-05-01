@@ -2,8 +2,9 @@
 #include <boost/bind.hpp>
 
 Server::Server(const std::string& address, const std::string& port,
-        std::size_t threadsCount, std::size_t servicesCount) :
-        threads(threadsCount, servicesCount),
+        std::size_t threadsCount, std::size_t servicesCount,
+        std::size_t cpu_cores, std::size_t cpu_ht_groups) :
+        threads(threadsCount, servicesCount, cpu_cores, cpu_ht_groups),
         signals(service()),
         acceptor(service()), newConnection() {
     signals.add(SIGINT);

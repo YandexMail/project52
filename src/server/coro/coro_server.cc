@@ -9,7 +9,7 @@
 #include <string>
 #include <thread>
 
-#include "zc_session_no_timer.h"
+#include "zc_session.h"
 
 int main(int argc, char* argv[])
 {
