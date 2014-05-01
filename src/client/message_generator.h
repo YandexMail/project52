@@ -46,6 +46,8 @@ struct message_generator
       auto sz = (*iii)->first;
     }
     std::cout << "message_generator self check: ok\n";
+#else
+		(void) i;
 #endif
   }
 

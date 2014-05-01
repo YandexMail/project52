@@ -254,7 +254,7 @@ class basic_stats : boost::noncopyable
         total_size_ += acc::sum (accu.size);
       }
 
-      print ();
+      print (now);
 
       if (has_samples) samples_.rinsert (samples_.begin (), slots, acc_type ());
       else samples_.push_back (acc_type ());
@@ -304,7 +304,7 @@ public:
       << chrono::time_fmt(chrono::timezone::local, "%A %B %e, %Y %r") 
       << start_time_ 
       << ", worked for " 
-      << pretty_duration (chrono::system_clock::now () - start_time_)
+      << pretty_duration (now - start_time_)
       << "\n";
     std::cout 
       << "Processed messages: " << pretty_count (total_messages_)

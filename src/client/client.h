@@ -102,7 +102,7 @@ public:
     sync_->connect (socket_, endpoint_iterator, strand_.wrap (
       y::utility::capture (
         [this, endpoint_iterator, tries] (
-          std::shared_ptr<client>& self,
+          std::shared_ptr<client>& /*self*/,
           boost::system::error_code const& err,
           asio::ip::tcp::resolver::iterator const& ep)
         {
@@ -164,7 +164,7 @@ std::cout << "bufseq size="
 
   void handle_server_response (
     boost::system::error_code const& err = boost::system::error_code (),
-    std::size_t bytes = 0)
+    std::size_t /*bytes*/ = 0)
   {
   	if (!err)
     {
@@ -173,7 +173,7 @@ std::cout << "sent to server " << bytes << " bytes\n";
 #endif
       response_parser_.reset ();
       this->parse_response (y::utility::capture (
-        [this] (std::shared_ptr<client>& self, 
+        [this] (std::shared_ptr<client>& /*self*/, 
           boost::system::error_code const& err, server_response const& r) 
         { 
           if (err)
@@ -210,7 +210,7 @@ private:
   {
   	sync_->read_some (socket_, asio::buffer (buffer_), strand_.wrap (
   	  y::utility::capture (
-        [this] (Handler& handler, std::shared_ptr<client>& self, 
+        [this] (Handler& handler, std::shared_ptr<client>& /*self*/, 
             boost::system::error_code const& ec, std::size_t bytes)
         {
           if (! ec)
