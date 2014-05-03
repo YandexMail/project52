@@ -102,6 +102,8 @@ struct fix_message_parser
   	else std::cout << input;
 
   	std::cout << "\n";
+#else
+		(void) input;
 #endif
   }
 

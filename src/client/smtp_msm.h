@@ -80,13 +80,13 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
    	}
      
     template <class FSM>
-    void on_entry (boost::any const& ev, FSM& fsm) 
+    void on_entry (boost::any const&, FSM& fsm) 
     { 
    		fsm.client ().do_connect (hashed.endpoints);
    	}
 
    	template <class Event, class FSM>
-    inline void on_exit (Event const&, FSM& fsm)
+    inline void on_exit (Event const&, FSM&)
     {
     }
 
@@ -186,7 +186,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
       }
 
       template <class Event, class FSM>
-      void on_exit (Event const&, FSM& fsm) const
+      void on_exit (Event const&, FSM&) const
       { 
         // std::cout << "leaving 'Data' state\n";
       }
