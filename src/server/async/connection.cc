@@ -23,7 +23,10 @@ void Connection::writeGreeting() {
                     boost::asio::placeholders::bytes_transferred)));
 }
 
-void Connection::handleGreetingWrite(const boost::system::error_code& e, std::size_t bytes) {
+void Connection::handleGreetingWrite(
+    const boost::system::error_code& e,
+    std::size_t /*bytes*/) 
+{
     if (! e) readCommand();
     else std::cout << "Connection::handleGreetingWrite: " << e.message () << "\n";
 }
@@ -91,7 +94,8 @@ void Connection::writeDataGreeting() {
                     boost::asio::placeholders::bytes_transferred)));
 }
 
-void Connection::handleDataGreetingWrite(const boost::system::error_code& e, std::size_t bytes) {
+void Connection::handleDataGreetingWrite(const boost::system::error_code& e,
+    std::size_t /*bytes*/) {
     if (!e) readData();
     else std::cout << "Connection::handleDataGreetingWrite: " << e.message () << "\n";
 }
@@ -141,7 +145,8 @@ void Connection::dataReply( const std::string & msg ) {
                     boost::asio::placeholders::bytes_transferred)));
 }
 
-void Connection::handleDataReply(const boost::system::error_code& e, std::size_t bytes) {
+void Connection::handleDataReply(const boost::system::error_code& e,
+    std::size_t /*bytes*/) {
     if (!e) {
         readCommand();
     }
@@ -158,7 +163,8 @@ void Connection::writeGoodbye() {
                     boost::asio::placeholders::bytes_transferred)));
 }
 
-void Connection::handleWriteGoodbye(const boost::system::error_code& e, std::size_t bytes) {
+void Connection::handleWriteGoodbye(const boost::system::error_code&,
+    std::size_t /*bytes*/) {
     shutdown();
 }
 

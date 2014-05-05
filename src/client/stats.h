@@ -141,11 +141,11 @@ std::string pretty_time (T const& t)
 {
 	double val = t;
 	char const* unit = "ns";
-	if (t >= 1000000000UL) {
+	if (t >= static_cast<T> (1000000000UL)) {
 		val /= 1000000000UL;
 		unit = "sec";
   } 
-	else if (t >= 1000000UL) {
+	else if (t >= static_cast<T> (1000000UL)) {
 		val /= 1000000UL;
 		unit = "ms";
   } 
@@ -254,7 +254,7 @@ class basic_stats : boost::noncopyable
         total_size_ += acc::sum (accu.size);
       }
 
-      print (now);
+      print (sys_now);
 
       if (has_samples) samples_.rinsert (samples_.begin (), slots, acc_type ());
       else samples_.push_back (acc_type ());
@@ -291,8 +291,10 @@ public:
     accu.speed (1.0 * size / dur_double);
   }
 
-  void print (time_point const& now = clock_type::now ())
+  void print (chrono::system_clock::time_point const& now = 
+      chrono::system_clock::now ())
   {
+
     std::cout <<
 "===========================================================================\n";
 

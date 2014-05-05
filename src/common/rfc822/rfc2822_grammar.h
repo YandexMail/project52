@@ -598,12 +598,14 @@ struct obs_angle_addr_parser
   inline obs_angle_addr_parser () {}
 
   template <typename ParserScannerT>
-  std::ptrdiff_t operator() (ParserScannerT const& scan, result_t& result) const
+  std::ptrdiff_t 
+  operator() (ParserScannerT const& scan, result_t& /*result*/) const
   {
     typedef SP::rule<ParserScannerT> rule_t;
     typedef typename SP::match_result<ParserScannerT, result_t>::type match_t;
 
-    rule_t rule = !CFWS >> '<' >> !obs_route >> addr_spec_p<ScannerT>() >> '>' >> !CFWS; 
+    rule_t rule = !CFWS >> '<' >> !obs_route
+                >> addr_spec_p<ScannerT>() >> '>' >> !CFWS; 
 
     match_t match = rule.parse (scan);
     return match.length ();

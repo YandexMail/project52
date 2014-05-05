@@ -15,13 +15,13 @@
 #endif
 #include "message_generator.h"
 #include <functional>
-#include "parse_args.h"
+#include <common/args/client.h>
 
 
 int main (int ac, char* av[])
 {
-  client_args args;
-	if (! parse_args (ac, av, args))
+  p52::args::client_args args;
+	if (! p52::args::parse_args (ac, av, args))
   {
   	return -1;
   }
@@ -41,23 +41,19 @@ int main (int ac, char* av[])
 
     p52::stats stats;
 
-    for (int i=0; i<args.sessions_number; ++i)
+    for (std::size_t i=0; i<args.sessions_number; ++i)
     {
-      std::string const& addr = 
+      auto const& addr = 
           args.server_address[i % args.server_address.size ()];
-      std::size_t found = addr.find_first_of (':');
-      assert (found != std::string::npos);
 
-      std::string host = addr.substr (0, found);
-      std::string port = addr.substr (found+1);
       // 1000 messages per session, then quit and new session begins
       io_mod->create<client_type> (io_service, i, 
-          host, port, mgen, std::ref (stats), 
+          addr.host, addr.service, mgen, std::ref (stats), 
           args.messages_per_session, args.messages_per_thread);
     }
 
     std::vector<std::thread> thr_group;
-    for (int i=1; i<args.threads_number; ++i)
+    for (std::size_t i=1; i<args.threads_number; ++i)
       thr_group.emplace_back (
         [&io_service] 
         { 

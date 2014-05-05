@@ -35,24 +35,24 @@ struct null_actions
 
   struct on_field_value_t
   {
-    void operator() (address_list_field_value<IteratorT> const& v) const {}
-    void operator() (base_field_value<IteratorT> const& v) const  {}
+    void operator() (address_list_field_value<IteratorT> const&) const {}
+    void operator() (base_field_value<IteratorT> const&) const  {}
   } on_field_value;
 
   struct on_field_data_t
   {
-    void operator() (field_data<IteratorT> const& v) const  {}
+    void operator() (field_data<IteratorT> const&) const  {}
   } on_field_data;
 
   struct on_field_array_t
   {
-    template <class C> void operator() (C const& c) const {}
+    template <class C> void operator() (C const&) const {}
   } on_field_array;
 
 
   struct on_header_list_t
   {
-    void operator() (header_list<IteratorT> const& c) const { }
+    void operator() (header_list<IteratorT> const&) const { }
   } on_header_list;
 
   on_range_args_t on_body_prefix, on_body;
@@ -264,7 +264,7 @@ struct error_handler
 
   template <typename ScannerT, typename ErrorT>
   SP::error_status <>
-  operator() (ScannerT const& scan, ErrorT const& err) const
+  operator() (ScannerT const& /*scan*/, ErrorT const& err) const
   {
 #if 0
     const SP::file_position fpos = err.where.get_position ();

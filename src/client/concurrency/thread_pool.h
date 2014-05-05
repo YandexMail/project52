@@ -36,7 +36,7 @@ public:
 
   void run ()
   {
-    int cpu = 0;
+    std::size_t cpu = 0;
 
     std::vector<std::shared_ptr<boost::thread> > threads;
     for (std::size_t i = 0; i < threads_ * io_services_.size(); ++i)
@@ -48,7 +48,7 @@ public:
       if (cpu_cores_ > 0)
       {
         std::set<std::size_t> cpus;
-        for (int h=0; h<cpu_ht_groups_; ++h)
+        for (std::size_t h=0; h<cpu_ht_groups_; ++h)
         {
           cpus.insert (cpu);
           if (++cpu >= cpu_cores_) cpu = 0;

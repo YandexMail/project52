@@ -15,7 +15,7 @@ using asio::ip::tcp;
 void start_signal (asio::signal_set& sig, tcp::acceptor& acceptor)
 {
   sig.async_wait (
-    [&] (boost::system::error_code const& ec, int signal_number)
+    [&] (boost::system::error_code const& ec, int /*signal_number*/)
     {
     	if (! ec)
       {

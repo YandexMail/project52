@@ -7,7 +7,7 @@ set(CMAKE_MODULE_PATH
 project(project52 C CXX)
 set(TARGET_LIBRARY "project52")
 
-set(INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
+set(INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src)
 set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 
 set(FLAGS

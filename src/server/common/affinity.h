@@ -22,6 +22,9 @@ bind_to_cpu (ThreadId const& thr_id, CPU_SET const& cpu_set)
 	    sizeof (cpu_set_t), &cpuset);
 
 	if (s != 0) return false;
+#else
+	(void) thr_id;
+	(void) cpu_set;
 #endif
 
   return true;

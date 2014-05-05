@@ -7,10 +7,10 @@
 #include <boost/spirit/include/classic.hpp>
 #include <boost/spirit/include/support_istream_iterator.hpp>
 
-#include "../../rfc822/rfc822.h"
-#include "../../rfc822/rfc2822_grammar.h"
-#include "../../rfc822/rfc2822_hooks.h"
-#include "../../rfc822/unfolding.h"
+#include <common/rfc822/rfc822.h>
+#include <common/rfc822/rfc2822_grammar.h>
+#include <common/rfc822/rfc2822_hooks.h>
+#include <common/rfc822/unfolding.h>
 #include <iostream>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
@@ -37,7 +37,7 @@ struct test_actions: public p52::rfc822::rfc2822::null_actions<IteratorT> {
         return boost::dynamic_pointer_cast<T>(fd.value);
     }
 
-    void on_field_data(field_data<iterator_t> const& fd) const 
+    void on_field_data(field_data<iterator_t> const& /*fd*/) const 
     {
 #if 0
         if( auto al = value<address_list>(fd) ) {
@@ -87,11 +87,9 @@ struct test_actions: public p52::rfc822::rfc2822::null_actions<IteratorT> {
 #endif
     }
 
-    void on_body_prefix(data_range_t const& data) const {
-    }
+    void on_body_prefix(data_range_t const&) const {}
 
-    void on_body(data_range_t const& data) const {
-    }
+    void on_body(data_range_t const&) const {}
 };
 
 template <typename ForwardIterator>
