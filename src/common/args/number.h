@@ -59,24 +59,24 @@ validate (boost::any& v,
     if (match.size () > 1)
     	switch (match.str (2)[0])
       {
-      	case 'k': val *= 1000;
-      	case 'm': val *= 1000;
-      	case 'g': val *= 1000;
-      	case 't': val *= 1000;
-      	case 'p': val *= 1000;
-      	case 'e': val *= 1000;
-      	case 'z': val *= 1000;
       	case 'y': val *= 1000;
+      	case 'z': val *= 1000;
+      	case 'e': val *= 1000;
+      	case 'p': val *= 1000;
+      	case 't': val *= 1000;
+      	case 'g': val *= 1000;
+      	case 'm': val *= 1000;
+      	case 'k': val *= 1000;
       	break;
 
-      	case 'K': val *= 1024;
-      	case 'M': val *= 1024;
-      	case 'G': val *= 1024;
-      	case 'T': val *= 1024;
-      	case 'P': val *= 1024;
-      	case 'E': val *= 1024;
-      	case 'Z': val *= 1024;
       	case 'Y': val *= 1024;
+      	case 'Z': val *= 1024;
+      	case 'E': val *= 1024;
+      	case 'P': val *= 1024;
+      	case 'T': val *= 1024;
+      	case 'G': val *= 1024;
+      	case 'M': val *= 1024;
+      	case 'K': val *= 1024;
       	break;
 
       	default: 
