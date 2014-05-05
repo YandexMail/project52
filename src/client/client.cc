@@ -20,15 +20,22 @@
 
 int main (int ac, char* av[])
 {
-  p52::args::client_args args;
-	if (! p52::args::parse_args (ac, av, args))
-  {
-  	return -1;
-  }
-
   try 
   {
-    message_generator::index index(args.message_archive_file.c_str ());
+    p52::args::client_args args;
+    if (! p52::args::parse_args (ac, av, args))
+      return -1;
+
+    std::cout <<
+      "file=" << args.message_archive_file
+      << "\nmax/min: " << args.min_msg_size () << "/" <<
+        args.max_msg_size ()
+      << "\nsessions: " << args.sessions_number ()
+      << "\nthreads: " << args.threads_number ()
+      << "\nper session: " << args.messages_per_session ()
+      << "\nper thread: " << args.messages_per_thread () << "\n";
+
+      message_generator::index index(args.message_archive_file.c_str ());
 
     asio::io_service io_service;
     message_generator mgen( index.lower_bound(args.min_msg_size), 

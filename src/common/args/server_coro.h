@@ -64,7 +64,7 @@ parse_args (int ac, char* av[], server_coro_args& sa)
   }
 
   if (vm.count("threads") == 1)
-  	sa.port = vm["threads"].as<number<>> ();
+  	sa.threads = vm["threads"].as<number<>> ();
   else
   {
   	std::cerr << "Threads number was not set [--threads]\n";

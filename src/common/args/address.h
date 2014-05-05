@@ -33,7 +33,7 @@ parse_address_type (std::regex const& regex,
 
 inline void 
 validate (boost::any& v,
-    std::vector<std::string>& values,
+    std::vector<std::string> const& values,
     address_type*, int)
 {
 	static std::regex const r1 ("\\[([^\\]]*)\\]:(.*)");

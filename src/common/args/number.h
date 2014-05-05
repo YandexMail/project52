@@ -19,9 +19,11 @@ struct number
 	number (T const& t) : value (t) {}
 	number (T&& t) : value (std::move (t)) {}
 
+  T const& operator() () const { return value; }
 	operator T const () const { return value; }
 };
 
+#if 0
 template <typename T>
 inline std::ostream&
 operator<< (std::ostream& os, number<T> const& n)
@@ -35,11 +37,12 @@ operator>> (std::istream& is, number<T>& n)
 {
 	return is >> n.value;
 }
+#endif
 
 template <typename T>
 inline void 
 validate (boost::any& v,
-    std::vector<std::string>& values,
+    std::vector<std::string> const& values,
     number<T>*, int)
 {
 	static std::regex const r ("(\\d+)([kKmMgGtTpPeEzZyY]?)");
@@ -56,24 +59,24 @@ validate (boost::any& v,
     if (match.size () > 1)
     	switch (match.str (2)[0])
       {
-      	case 'k': val *= 1000;
-      	case 'm': val *= 1000;
-      	case 'g': val *= 1000;
-      	case 't': val *= 1000;
-      	case 'p': val *= 1000;
-      	case 'e': val *= 1000;
-      	case 'z': val *= 1000;
       	case 'y': val *= 1000;
+      	case 'z': val *= 1000;
+      	case 'e': val *= 1000;
+      	case 'p': val *= 1000;
+      	case 't': val *= 1000;
+      	case 'g': val *= 1000;
+      	case 'm': val *= 1000;
+      	case 'k': val *= 1000;
       	break;
 
-      	case 'K': val *= 1024;
-      	case 'M': val *= 1024;
-      	case 'G': val *= 1024;
-      	case 'T': val *= 1024;
-      	case 'P': val *= 1024;
-      	case 'E': val *= 1024;
-      	case 'Z': val *= 1024;
       	case 'Y': val *= 1024;
+      	case 'Z': val *= 1024;
+      	case 'E': val *= 1024;
+      	case 'P': val *= 1024;
+      	case 'T': val *= 1024;
+      	case 'G': val *= 1024;
+      	case 'M': val *= 1024;
+      	case 'K': val *= 1024;
       	break;
 
       	default: 
