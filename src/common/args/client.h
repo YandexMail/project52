@@ -85,11 +85,27 @@ parse_args (int ac, char* av[], client_args& ca)
   	ret = false;
   }
 
+  if (vm.count("sessions"))
+  	ca.sessions_number = vm["sessions"].as<number<>> ();
+  else
+  {
+  	std::cerr << "Sessions number was not set [--sessions]\n";
+  	ret = false;
+  }
+
+  if (vm.count("threads"))
+  	ca.threads_number = vm["threads"].as<number<>> ();
+  else
+  {
+  	std::cerr << "Threads number was not set [--threads]\n";
+  	ret = false;
+  }
+
   if (vm.count("min-size"))
   	ca.min_msg_size = vm["min-size"].as<number<>> ();
   else
   {
-  	std::cerr << "Minimal message size [--min-size]\n";
+  	std::cerr << "Minimal message size was not set [--min-size]\n";
   	ret = false;
   }
 
@@ -101,7 +117,7 @@ parse_args (int ac, char* av[], client_args& ca)
   }
   else
   {
-  	std::cerr << "Maximum message size [--max-size]\n";
+  	std::cerr << "Maximum message size was not set [--max-size]\n";
   	ret = false;
   }
 
@@ -113,7 +129,7 @@ parse_args (int ac, char* av[], client_args& ca)
   }
   else
   {
-  	std::cerr << "Messages per session [--messages-per-session]\n";
+  	std::cerr << "Messages per session was not set [--messages-per-session]\n";
   	ret = false;
   }
 
@@ -125,7 +141,7 @@ parse_args (int ac, char* av[], client_args& ca)
   }
   else
   {
-  	std::cerr << "Messages per thread [--messages-per-thread]\n";
+  	std::cerr << "Messages per thread was not set [--messages-per-thread]\n";
   	ret = false;
   }
 
