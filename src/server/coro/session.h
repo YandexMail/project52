@@ -13,15 +13,9 @@
 #include "../common/inbuf.h"
 #include "../common/outbuf.h"
 #include "../common/rfc822.h"
+#include "../common/reply.h"
 
 #include <boost/spirit/include/support_istream_iterator.hpp>
-
-template <typename OutStream>
-void command_reply (OutStream& os, std::string const& msg = "250 Ok")
-{
-  os << msg << "\r\n" << std::flush;
-}
-
 
 namespace asio = boost::asio;
 using asio::ip::tcp;

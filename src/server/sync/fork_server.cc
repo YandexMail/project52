@@ -7,6 +7,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <common/args/server_simple.h>
+
+#include "session.h"
 #include "zc_session.h"
 
 namespace asio = boost::asio;
@@ -39,8 +42,9 @@ void start_signal (asio::signal_set& sig, tcp::acceptor& acceptor)
   );
 }
 
+template <typename Session>
 void start_accept (tcp::acceptor& acceptor, asio::signal_set& sig, 
-    tcp::socket& socket)
+    tcp::socket& socket, Session session)
 {
 	asio::io_service& io_service (socket.get_io_service ());
   acceptor.async_accept (socket, 
@@ -57,14 +61,14 @@ void start_accept (tcp::acceptor& acceptor, asio::signal_set& sig,
             io_service.notify_fork (asio::io_service::fork_child);
             acceptor.close ();
             sig.cancel ();
-            int ret = session (std::move (socket));
+            int ret = (*session) (std::move (socket));
             exit (ret);
           }
 
           default:
             io_service.notify_fork (asio::io_service::fork_parent);
             socket.close ();
-            start_accept (acceptor, sig, socket);
+            start_accept (acceptor, sig, socket, session);
             break;
 
           case -1:
@@ -75,20 +79,21 @@ void start_accept (tcp::acceptor& acceptor, asio::signal_set& sig,
       else
       {
         std::cerr << "Accept error: " << ec.message() << std::endl;
-        start_accept (acceptor, sig, socket);
+        start_accept (acceptor, sig, socket, session);
       }
     }
   );
 }
 
-void server (asio::io_service& io_service, unsigned short port)
+template <typename Session>
+void server (asio::io_service& io_service, unsigned short port, Session session)
 {
   tcp::acceptor a (io_service, tcp::endpoint(tcp::v4(), port));
 	asio::signal_set sig (io_service, SIGCHLD);
   tcp::socket socket (io_service);
 
   start_signal (sig, a);
-  start_accept (a, sig, socket);
+  start_accept (a, sig, socket, session);
 
   io_service.run ();
 }
@@ -97,14 +102,16 @@ int main(int argc, char* argv[])
 {
   try
   {
-    if (argc != 2)
-    {
-      std::cerr << "Usage: sync_server <port>\n";
-      return 1;
-    }
+    p52::args::server_simple_args args;
+    if (! p52::args::parse_args (argc, argv, args))
+      return -1;
 
     asio::io_service io_service;
-    server(io_service, std::atoi(argv[1]));
+
+    if (args.zero_copy)
+      server(io_service, args.port, &session);
+    else
+      server(io_service, args.port, &zc_session);
   }
   catch (std::exception& e)
   {

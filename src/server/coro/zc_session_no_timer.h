@@ -12,6 +12,7 @@
 
 #include "../common/outbuf.h"
 #include "../common/rfc822.h"
+#include "../common/reply.h"
 
 #include <zerocopy/streambuf.h>
 #include <zerocopy/exp_iterator.h>
@@ -32,13 +33,6 @@ make_zc_streambuf (F&& func)
                       std::allocator<char>, std::allocator<void>> (
         0, 0, 0, 0, 0, std::forward<F> (func))
   );
-}
-
-
-template <typename OutStream>
-void command_reply (OutStream& os, std::string const& msg = "250 Ok")
-{
-  os << msg << "\r\n" << std::flush;
 }
 
 
@@ -65,10 +59,11 @@ public:
 };
 
 
-class session : public std::enable_shared_from_this<session>
+class zc_session_no_timer 
+    : public std::enable_shared_from_this<zc_session_no_timer>
 {
 public:
-  explicit session(tcp::socket socket)
+  explicit zc_session_no_timer (tcp::socket socket)
     : socket_(std::move(socket))
     , io_service_ (socket_.get_io_service ())
   {

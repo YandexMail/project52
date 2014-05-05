@@ -32,14 +32,15 @@ parse_args (int ac, char* av[], client_args& ca)
   po::options_description client_options ("Client options");
 
   client_options
+    .add (get_sessions_options ())
     .add (get_address_options ())
     .add (get_generic_options ())
     .add_options ()
-      ("message-file,f", po::value<std::string> (),
+      ("file,f", po::value<std::string> (),
         "message archive file")
-      ("min-msg-size,m", po::value<number<>> ()
+      ("min-size,m", po::value<number<>> ()
         ->default_value (0), "minimum message size")
-      ("max-msg-size,M", po::value<number<>> ()
+      ("max-size,M", po::value<number<>> ()
         ->default_value (0, "inf"), "maximum message size")
       ("messages-per-session,n", po::value<number<>> ()
         ->default_value (0, "inf"), "messages per session")
@@ -49,7 +50,12 @@ parse_args (int ac, char* av[], client_args& ca)
 
   po::positional_options_description pos;
   pos
-    .add ("message-file", 1)
+    .add ("file", 1)
+    .add ("sessions", 1)
+    .add ("threads", 1)
+    .add ("min-size", 1)
+    .add ("max-size", 1)
+    .add ("address", -1)
   ;
 
   po::variables_map vm;
@@ -63,11 +69,11 @@ parse_args (int ac, char* av[], client_args& ca)
 
   po::notify (vm);
 
-  if (vm.count("message-file"))
-  	ca.message_archive_file = vm["message-file"].as<std::string> ();
+  if (vm.count("file"))
+  	ca.message_archive_file = vm["file"].as<std::string> ();
   else
   {
-  	std::cerr << "Message file was not set [--message-file]\n";
+  	std::cerr << "Message file was not set [--file]\n";
   	ret = false;
   }
 
@@ -79,23 +85,23 @@ parse_args (int ac, char* av[], client_args& ca)
   	ret = false;
   }
 
-  if (vm.count("min-msg-size"))
-  	ca.min_msg_size = vm["min-msg-size"].as<number<>> ();
+  if (vm.count("min-size"))
+  	ca.min_msg_size = vm["min-size"].as<number<>> ();
   else
   {
-  	std::cerr << "Minimal message size [--min-msg-size]\n";
+  	std::cerr << "Minimal message size [--min-size]\n";
   	ret = false;
   }
 
-  if (vm.count("max-msg-size"))
+  if (vm.count("max-size"))
   {
-  	ca.max_msg_size = vm["max-msg-size"].as<number<>> ();
+  	ca.max_msg_size = vm["max-size"].as<number<>> ();
   	if (! ca.max_msg_size)
   		ca.max_msg_size = std::numeric_limits<std::size_t>::max ();
   }
   else
   {
-  	std::cerr << "Maximum message size [--max-msg-size]\n";
+  	std::cerr << "Maximum message size [--max-size]\n";
   	ret = false;
   }
 
@@ -124,11 +130,11 @@ parse_args (int ac, char* av[], client_args& ca)
   }
 
   if (! ret || vm.count("help")) {
-  	std::cout << "Usage: ...\n";
+  	std::cout << "Usage: [<options>] <file> <sessions> <threads> "
+  	    "<min-size> <max-size> <addr:port...>\n";
   	std::cout << client_options << "\n";
   	return false;
   }
-
 
   return true;
 

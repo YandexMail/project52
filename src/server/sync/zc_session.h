@@ -7,6 +7,7 @@
 
 #include "../common/outbuf.h"
 #include "../common/rfc822.h"
+#include "../common/reply.h"
 
 #include <zerocopy/streambuf.h>
 #include <zerocopy/exp_iterator.h>
@@ -32,14 +33,6 @@ make_zc_streambuf (F&& func)
 namespace asio = boost::asio;
 using asio::ip::tcp;
 
-const int max_length = 1024;
-
-template <typename OutStream>
-void command_reply (OutStream& os, std::string const& msg = "250 Ok")
-{
-  os << msg << "\r\n" << std::flush;
-}
-
 template <typename Socket>
 class read_handler
 {
@@ -56,7 +49,7 @@ public:
   };
 };
 
-int session(tcp::socket sock)
+int zc_session(tcp::socket sock)
 {
   try
   {
