@@ -18,9 +18,10 @@
 namespace asio = boost::asio;
 using asio::ip::tcp;
 
-template <typename Session>
+using session_func = std::add_pointer<int(tcp::socket)>::type;
+
 void server(asio::io_service& io_service, unsigned short port,
-  Session session)
+  session_func session)
 {
   tcp::acceptor a(io_service, tcp::endpoint(tcp::v4(), port));
   for (;;)

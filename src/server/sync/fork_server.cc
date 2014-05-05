@@ -42,18 +42,22 @@ void start_signal (asio::signal_set& sig, tcp::acceptor& acceptor)
   );
 }
 
-template <typename Session>
+// typedef int session_func (tcp::socket sock);
+//typedef int (*session_func) (tcp::socket sock);
+using session_func = std::add_pointer<int(tcp::socket)>::type;
+
 void start_accept (tcp::acceptor& acceptor, asio::signal_set& sig, 
-    tcp::socket& socket, Session session)
+    tcp::socket& socket, session_func sess)
 {
 	asio::io_service& io_service (socket.get_io_service ());
   acceptor.async_accept (socket, 
-    [&] (boost::system::error_code const& ec)
+    [&,sess] (boost::system::error_code const& ec)
     {
       if (! ec)
       {
         // std::cout << "start_accept: forking...\n";
         io_service.notify_fork (asio::io_service::fork_prepare);
+
         switch (fork ())
         {
           case 0: 
@@ -61,14 +65,14 @@ void start_accept (tcp::acceptor& acceptor, asio::signal_set& sig,
             io_service.notify_fork (asio::io_service::fork_child);
             acceptor.close ();
             sig.cancel ();
-            int ret = (*session) (std::move (socket));
+            int ret = (*sess) (std::move (socket));
             exit (ret);
           }
 
           default:
             io_service.notify_fork (asio::io_service::fork_parent);
             socket.close ();
-            start_accept (acceptor, sig, socket, session);
+            start_accept (acceptor, sig, socket, sess);
             break;
 
           case -1:
@@ -79,21 +83,21 @@ void start_accept (tcp::acceptor& acceptor, asio::signal_set& sig,
       else
       {
         std::cerr << "Accept error: " << ec.message() << std::endl;
-        start_accept (acceptor, sig, socket, session);
+        start_accept (acceptor, sig, socket, sess);
       }
     }
   );
 }
 
-template <typename Session>
-void server (asio::io_service& io_service, unsigned short port, Session session)
+void server (asio::io_service& io_service, unsigned short port,
+    session_func sess)
 {
   tcp::acceptor a (io_service, tcp::endpoint(tcp::v4(), port));
 	asio::signal_set sig (io_service, SIGCHLD);
   tcp::socket socket (io_service);
 
   start_signal (sig, a);
-  start_accept (a, sig, socket, session);
+  start_accept (a, sig, socket, sess);
 
   io_service.run ();
 }
@@ -109,9 +113,9 @@ int main(int argc, char* argv[])
     asio::io_service io_service;
 
     if (args.zero_copy)
-      server(io_service, args.port, &session);
-    else
       server(io_service, args.port, &zc_session);
+    else
+      server(io_service, args.port, &session);
   }
   catch (std::exception& e)
   {
