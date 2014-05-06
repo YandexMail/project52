@@ -65,8 +65,8 @@ get_address_options ()
 	    ("address,A",
 	        po::value<std::vector<address_type>> ()
 	          ->default_value (
-	            std::vector<address_type> (1, {"localhost", "25"}), 
-	            "localhost:25")
+	            std::vector<address_type> (1, {"localhost", "30025"}), 
+	            "localhost:30025")
 	          ->composing ()
 	     ,   "endpoint(s) in form <ip:port>...")
 	;

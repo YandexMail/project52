@@ -8,7 +8,7 @@
 // ip address list parsing
 namespace p52 { namespace args {
 
-enum coro_buffer_type { copy, zero_copy, zero_copy_no_timer };
+enum coro_buffer_type { copy, one_pass, zero_copy };
 
 struct server_coro_args
 {
@@ -31,7 +31,7 @@ parse_args (int ac, char* av[], server_coro_args& sa)
     .add (get_generic_options ())
     .add_options ()
       ("zero-copy,Z", "Use zero copy buffers")
-      ("no-timer,N", "Use zero copy buffers without timer thread")
+      ("one-pass,P", "Use one-pass buffers")
       ("port,p", po::value<short unsigned> ()
         ->default_value (25), "tcp port number")
       ("threads,t", po::value<number<>> ()
@@ -71,10 +71,10 @@ parse_args (int ac, char* av[], server_coro_args& sa)
   	ret = false;
   }
 
-  if (vm.count ("no-timer"))
-  	sa.buffer_type = zero_copy_no_timer;
-  else if (vm.count ("zero-copy"))
+  if (vm.count ("zero-copy"))
   	sa.buffer_type = zero_copy;
+  else if (vm.count ("one-pass"))
+  	sa.buffer_type = one_pass;
   else 
   	sa.buffer_type = copy;
 

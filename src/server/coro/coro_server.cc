@@ -11,6 +11,7 @@
 
 #include <common/args/server_coro.h>
 #include "session.h"
+#include "op_session.h"
 #include "zc_session.h"
 
 int main(int argc, char* argv[])
@@ -44,8 +45,8 @@ int main(int argc, char* argv[])
             		case p52::args::zero_copy: 
             	    std::make_shared<zc_session>(std::move(socket))->go();
             	    break;
-            		case p52::args::zero_copy_no_timer: 
-            	    std::make_shared<zc_session_no_timer> 
+            		case p52::args::one_pass: 
+            	    std::make_shared<op_session> 
             	      (std::move(socket))->go();
             	    break;
             	} // switch
