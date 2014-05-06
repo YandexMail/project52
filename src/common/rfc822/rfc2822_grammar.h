@@ -1701,7 +1701,7 @@ struct grammar: public SP::grammar<grammar<Actions, ErrorHandler> >
 
       top = g ( 
                      header_list_rule [ on_header_list ]
-                  >> SP::flush_multi_pass_p
+                 // >> SP::flush_multi_pass_p
                   >> ! (   CRLF [ on_body_prefix ] 
                         >> body [ on_body ]
                         >> !smtp_end)

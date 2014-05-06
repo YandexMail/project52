@@ -67,12 +67,12 @@ parse_args (int ac, char* av[], server_async_args& saa)
   if (vm.count("affinity") == 1)
   	saa.affinity = vm["affinity"].as<affinity_args> ();
   else
-  {
+  
     saa.affinity = {0, 0};
   }
 
   if (! ret || vm.count("help")) {
-  	std::cout << "Usage: [<options>] <port> <threads>\n";
+  	std::cout << "Usage: [<options>] [reactors:]threads host:port...\n";
   	std::cout << server_async_options << "\n";
   	return false;
   }
