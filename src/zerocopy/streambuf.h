@@ -216,7 +216,8 @@ public:
   typedef typename allocator_type::template rebind<asio::const_buffer>::other
     const_buffers_allocator;
 
-  typedef std::vector<asio::const_buffer, const_buffers_allocator> const_buffers_type;
+  typedef std::vector<asio::const_buffer, const_buffers_allocator> 
+      const_buffers_type;
 
   template <typename T>
   struct iteratorT
@@ -261,6 +262,12 @@ public:
   get_allocator () const
   {
     return allocator_;
+  }
+
+  inline std::size_t 
+  max_size () const 
+  {
+    return (std::numeric_limits<std::size_t>::max)();
   }
 
   void init(std::size_t start_fragments
@@ -568,7 +575,7 @@ std::cerr << "DATA ()\n";
       }
 
       // add put_active segment
-      char_type const* ptr = detail::buffer_cast<char_type*> (**iter);
+      char_type const* ptr = detail::buffer_cast<char_type const*> (**iter);
       std::size_t sz = this->pptr () - ptr;
 
       if (sz > 0)
@@ -633,7 +640,7 @@ std::cerr << "CONSUME (" << size << "), tailsize=" << tail_size ()
       // FIXME: not optimal
       std::streambuf::setg (this->eback (), this->gptr (), (*get_active ())->end ());
 
-    if (size <= this->egptr () - this->gptr ())
+    if (size <= static_cast<std::size_t> (this->egptr () - this->gptr ()))
     {
       std::streambuf::setg (this->gptr () + size, this->gptr () + size,
           this->egptr ());

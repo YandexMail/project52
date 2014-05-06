@@ -2,6 +2,8 @@
 #include <string>
 #include <boost/thread.hpp>
 #include "server.h"
+#include "connection.h"
+#include "zc_connection.h"
 #include <sstream>
 #include <common/args/server_async.h>
 
@@ -18,12 +20,24 @@ int main(int argc, char* argv[]) {
           gr.create_thread (
             [&args,addr] 
             {
-              Server server (
-                addr.host, addr.service,
-                args.threads.threads, args.threads.reactors,
-                args.affinity.cpus, args.affinity.ht
-              );
-              server.run ();
+              if (args.zero_copy)
+              {
+                Server<ZcConnection> server (
+                  addr.host, addr.service,
+                  args.threads.threads, args.threads.reactors,
+                  args.affinity.cpus, args.affinity.ht
+                );
+                server.run ();
+              }
+              else
+              {
+                Server<Connection> server (
+                  addr.host, addr.service,
+                  args.threads.threads, args.threads.reactors,
+                  args.affinity.cpus, args.affinity.ht
+                );
+                server.run ();
+              }
             }
           );
         }

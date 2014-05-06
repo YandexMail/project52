@@ -1,26 +1,27 @@
-#ifndef ASYNC_SERVER_CONNECTION_HPP
-#define ASYNC_SERVER_CONNECTION_HPP
+#ifndef ASYNC_SERVER_ZC_CONNECTION_HPP
+#define ASYNC_SERVER_ZC_CONNECTION_HPP
 
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
 #include <boost/noncopyable.hpp>
+#include <zerocopy/streambuf.h>
 
 /// Represents a single connection from a client.
-class Connection: public std::enable_shared_from_this<Connection>,
+class ZcConnection: public std::enable_shared_from_this<ZcConnection>,
         private boost::noncopyable {
 public:
-    typedef std::shared_ptr<Connection> Ptr;
+    typedef std::shared_ptr<ZcConnection> Ptr;
 
     typedef boost::asio::ip::tcp tcp;
     /// Construct a connection with the given io_service.
-    explicit Connection(boost::asio::io_service& io_service) 
+    explicit ZcConnection(boost::asio::io_service& io_service) 
     : strand_(io_service)
     , socket_(io_service)
     , sent_ (0)
     {
     }
 
-    ~Connection ();
+    ~ZcConnection ();
 
     tcp::socket& socket() {
         return socket_;
@@ -55,7 +56,7 @@ private:
 
     /// Buffer for incoming data.
     typedef boost::asio::basic_streambuf<> streambuf;
-    streambuf inBuf;
+    zerocopy::streambuf inBuf;
     streambuf outBuf;
 
     std::size_t sent_;
@@ -65,4 +66,4 @@ private:
 };
 
 
-#endif // ASYNC_SERVER_CONNECTION_HPP
+#endif // ASYNC_SERVER_ZC_CONNECTION_HPP

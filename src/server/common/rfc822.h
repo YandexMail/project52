@@ -102,12 +102,28 @@ inline bool parse(ForwardIterator first, ForwardIterator const& last) {
 
 inline bool parse(std::istream & is) {
     namespace spirit = boost::spirit;
+#if 1
 
     // is.unsetf (std::ios::skipws);
     spirit::istream_iterator first (is);
     spirit::istream_iterator last;
 
     return parse (first, last);
+#else
+
+    typedef std::istream::char_type char_t;
+    typedef classic::multi_pass<std::istreambuf_iterator<char_t> > multi_pass_iterator_t;
+
+    multi_pass_iterator_t in_begin(
+            classic::make_multi_pass(std::istreambuf_iterator<char_t>(is)));
+    multi_pass_iterator_t in_end(
+            classic::make_multi_pass(std::istreambuf_iterator<char_t>()));
+
+    test_actions<multi_pass_iterator_t> actions;
+    rfc2822::grammar<test_actions<multi_pass_iterator_t> > g(actions);
+
+    return boost::spirit::classic::parse(in_begin, in_end, g).full;
+#endif
 }
 
 } //namespace rfc822

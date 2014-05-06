@@ -33,12 +33,12 @@ validate (boost::any& v, std::vector<std::string> const& values,
   std::smatch match;
   if (regex_match(s, match, r))
   {
-    assert (match.size () == 4);
+    assert (match.size () == 3);
 
     affinity_args args; // = { 1, 1 };
 
     args.cpus = boost::lexical_cast<std::size_t> (match[1]);
-    args.ht = boost::lexical_cast<std::size_t> (match[3]);
+    args.ht = boost::lexical_cast<std::size_t> (match[2]);
 
     v = boost::any (args);
   }

@@ -6,9 +6,10 @@
 #include <vector>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
-#include "connection.h"
+#include <boost/bind.hpp>
 #include "../../client/concurrency/thread_pool.h"
 
+template <typename _Connection>
 class Server: private boost::noncopyable {
 public:
     explicit Server(const std::string& address, const std::string& port,
@@ -36,7 +37,46 @@ private:
     thread_pool threads;
     boost::asio::signal_set signals;
     boost::asio::ip::tcp::acceptor acceptor;
-    ConnectionPtr newConnection;
+    typename _Connection::Ptr newConnection;
 };
 
+
+template <typename _Connection>
+Server<_Connection>::Server(const std::string& address, const std::string& port,
+        std::size_t threadsCount, std::size_t servicesCount,
+        std::size_t cpu_cores, std::size_t cpu_ht_groups) :
+        threads(threadsCount, servicesCount, cpu_cores, cpu_ht_groups),
+        signals(service()),
+        acceptor(service()), newConnection() {
+    signals.add(SIGINT);
+    signals.add(SIGTERM);
+    signals.async_wait(boost::bind(&Server::handleStop, this));
+
+    using boost::asio::ip::tcp;
+    tcp::resolver resolver(acceptor.get_io_service());
+    tcp::resolver::query query(address, port);
+    tcp::endpoint endpoint = *resolver.resolve(query);
+
+    acceptor.open(endpoint.protocol());
+    acceptor.set_option(tcp::acceptor::reuse_address(true));
+    acceptor.bind(endpoint);
+    acceptor.listen();
+}
+
+template <typename _Connection>
+void 
+Server<_Connection>::startAccept() {
+    newConnection.reset(new _Connection(service()));
+    acceptor.async_accept(newConnection->socket(),
+            boost::bind(&Server::handleAccept, this,
+                    boost::asio::placeholders::error));
+}
+
+template <typename _Connection>
+void Server<_Connection>::handleAccept(const boost::system::error_code& e) {
+    if (!e) {
+        newConnection->start();
+    }
+    startAccept();
+}
 #endif // ASYNC_SERVER_SERVER_HPP

@@ -74,7 +74,7 @@ template <typename T>
 T
 buffer_cast (basic_fragment const& s)
 {
-  return static_cast<T> (s.begin ());
+  return static_cast<T> (s.begin ()); // FIXME
 }
 
 template <typename Alloc /* = std::allocator<char> */>

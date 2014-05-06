@@ -522,7 +522,9 @@ BOOST_SPIRIT_RULE_PARSER (time,-,-,-,time_of_day >> FWS >> zone)
 BOOST_SPIRIT_RULE_PARSER (date_time,-,-,-,
                           !(day_of_week >> ',') >> date >> FWS >> time >> !CFWS)
 
+namespace {
 chset<> dtext (NO_WS_CTL | chset_p ("\x21-\x5a\x5e-\x7e\x80-\xff"));
+}
 
 BOOST_SPIRIT_RULE_PARSER (dcontent,-,-,-, dtext | quoted_pair);
 BOOST_SPIRIT_RULE_PARSER (domain_literal,-,-,-,

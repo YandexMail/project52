@@ -14,6 +14,7 @@ struct server_async_args
   threads_args threads;
   affinity_args affinity;
   std::vector<address_type> addresses;
+  bool zero_copy;
 };
 
 namespace {
@@ -29,6 +30,8 @@ parse_args (int ac, char* av[], server_async_args& saa)
     .add (get_generic_options ())
     .add (get_threads_options ())
     .add (get_address_options ())
+    .add_options ()
+      ("zero-copy,Z", "Use zero copy buffers")
   ;
 
   po::positional_options_description pos;
@@ -64,12 +67,12 @@ parse_args (int ac, char* av[], server_async_args& saa)
   	ret = false;
   }
 
+	saa.zero_copy = (vm.count("zero-copy") > 0);
+
   if (vm.count("affinity") == 1)
   	saa.affinity = vm["affinity"].as<affinity_args> ();
   else
-  {
     saa.affinity = {0, 0};
-  }
 
   if (! ret || vm.count("help")) {
   	std::cout << "Usage: [<options>] [reactors:]threads host:port...\n";

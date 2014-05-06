@@ -87,6 +87,7 @@ public:
                   if (rfc822::parse (is))
                   {
                     // std::cout << "parse ok\n";
+                    std::getline (is, line);
                     command_reply (os);
                   }
                   else
