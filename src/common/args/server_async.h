@@ -67,7 +67,7 @@ parse_args (int ac, char* av[], server_async_args& saa)
   if (vm.count("affinity") == 1)
   	saa.affinity = vm["affinity"].as<affinity_args> ();
   else
-  
+  {
     saa.affinity = {0, 0};
   }
 
