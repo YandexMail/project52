@@ -117,11 +117,9 @@ void ZcConnection::handleData(const boost::system::error_code& ec, std::size_t b
 	sent_ = bytes;
 #if 1
     try {
-      std::istream s(&inBuf);
-      s.unsetf (std::ios::skipws);
-
-      if( rfc822::parse(s) ) {
-          dataReply();
+      if( rfc822::parse(inBuf.begin(), inBuf.end()) ) {
+          inBuf.detach(inBuf.end());
+	  dataReply();
       } else {
           dataReply("451 rfc2822 violation\r\n");
       }
