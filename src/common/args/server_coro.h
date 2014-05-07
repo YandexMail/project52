@@ -33,7 +33,7 @@ parse_args (int ac, char* av[], server_coro_args& sa)
       ("zero-copy,Z", "Use zero copy buffers")
       ("one-pass,P", "Use one-pass buffers")
       ("port,p", po::value<short unsigned> ()
-        ->default_value (25), "tcp port number")
+        ->default_value (30025), "tcp port number")
       ("threads,t", po::value<number<>> ()
         ->default_value (1), "threads number")
   ;

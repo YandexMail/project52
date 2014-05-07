@@ -7,7 +7,7 @@
 
 #include "../common/inbuf.h"
 #include "../common/outbuf.h"
-#include "../common/rfc822.h"
+#include "../common/rfc822_v2.h"
 #include "../common/reply.h"
 
 #include <boost/spirit/include/support_istream_iterator.hpp>

@@ -1,5 +1,5 @@
 #include "connection.h"
-#include "../common/rfc822.h"
+#include "../common/rfc822_v2.h"
 
 const std::string Connection::endOfData = "\r\n.\r\n";
 

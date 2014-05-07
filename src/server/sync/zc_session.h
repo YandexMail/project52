@@ -6,7 +6,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "../common/outbuf.h"
-#include "../common/rfc822.h"
+#include "../common/rfc822_v2.h"
 #include "../common/reply.h"
 
 #include <zerocopy/streambuf.h>

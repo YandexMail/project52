@@ -1,5 +1,3 @@
-#define BOOST_SPIRIT_THREADSAFE
-#define PHOENIX_THREADSAFE
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
@@ -12,7 +10,7 @@
 
 #include "../common/inbuf.h"
 #include "../common/outbuf.h"
-#include "../common/rfc822.h"
+#include "../common/rfc822_v2.h"
 #include "../common/reply.h"
 
 #include <boost/spirit/include/support_istream_iterator.hpp>
@@ -40,7 +38,7 @@ public:
           try
           {
             auto ibuf = make_inbuf_ptr ( 
-              [this, &yield] (boost::system::error_code& ec, 
+              [this, yield] (boost::system::error_code& ec, 
                 asio::mutable_buffers_1 const& buf) 
               -> std::size_t
               { 
@@ -51,7 +49,7 @@ public:
             );
 
             auto obuf = make_outbuf_ptr (
-              [this, &yield] (boost::system::error_code& ec, 
+              [this, yield] (boost::system::error_code& ec, 
                 asio::const_buffers_1 const& buf) -> std::size_t
               {
                 return asio::async_write (socket_, buf, yield [ec]);
@@ -87,7 +85,7 @@ public:
                   if (rfc822::parse (is))
                   {
                     // std::cout << "parse ok\n";
-                    std::getline (is, line);
+                    // std::getline (is, line);
                     command_reply (os);
                   }
                   else

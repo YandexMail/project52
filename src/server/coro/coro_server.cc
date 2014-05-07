@@ -1,5 +1,6 @@
 #define BOOST_SPIRIT_THREADSAFE
 #define PHOENIX_THREADSAFE
+
 #include <boost/lexical_cast.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>

@@ -1,7 +1,7 @@
 #include "connection.h"
 #include <boost/bind.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include "../common/rfc822.h"
+#include "../common/rfc822_v2.h"
 
 const std::string Connection::endOfData = "\r\n.\r\n";
 

@@ -8,7 +8,7 @@
 #include <boost/asio.hpp>
 
 #include <boost/algorithm/string/predicate.hpp>
-#include "../common/rfc822.h"
+#include "../common/rfc822_v2.h"
 
 #include <common/args/server_simple.h>
 

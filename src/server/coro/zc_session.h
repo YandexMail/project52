@@ -1,5 +1,3 @@
-#define BOOST_SPIRIT_THREADSAFE
-#define PHOENIX_THREADSAFE
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
@@ -11,7 +9,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "../common/outbuf.h"
-#include "../common/rfc822.h"
+#include "../common/rfc822_v2.h"
 #include "../common/reply.h"
 
 #include <zerocopy/streambuf.h>
@@ -42,12 +40,15 @@ using asio::ip::tcp;
 template <typename Socket, typename Timer>
 class read_handler
 {
+	asio::yield_context yield_;
   Socket& sock_;
   Timer& timer_;
   int secs_;
 public:
-  read_handler (Socket& sock, Timer& timer, int secs) 
-    : sock_ (sock)
+  read_handler (asio::yield_context const& yield, 
+      Socket& sock, Timer& timer, int secs) 
+    : yield_ (yield)
+    , sock_ (sock)
     , timer_ (timer)
     , secs_ (secs) {}
 
@@ -55,9 +56,11 @@ public:
   bool operator() (Streambuf* sb) const
   {
     timer_.expires_from_now(std::chrono::seconds(secs_));
-    std::size_t n = sock_.read_some (sb->prepare (1024));
+
+    boost::system::error_code ec;
+    std::size_t n = sock_.async_read_some (sb->prepare (1024), yield_[ec]);
     sb->commit (n);
-    return true;
+    return !ec;
   };
 };
 
@@ -81,12 +84,12 @@ public:
           try
           {
             auto ibuf = make_zc_streambuf (
-                read_handler<tcp::socket, asio::steady_timer> (socket_, 
-                  timer_, 10)
+                read_handler<tcp::socket, asio::steady_timer> (
+                  yield, socket_, timer_, 10)
             );
 
             auto obuf = make_outbuf_ptr (
-              [this, &yield] (boost::system::error_code& ec, 
+              [this, yield] (boost::system::error_code& ec, 
                 asio::const_buffers_1 const& buf) -> std::size_t
               {
                 return asio::async_write (socket_, buf, yield [ec]);
