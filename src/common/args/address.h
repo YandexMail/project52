@@ -1,6 +1,6 @@
 #include <common/args/po.h>
+#include <common/args/regex.h>
 #include <string>
-#include <regex>
 
 // ip address list parsing
 namespace p52 { namespace args {
@@ -13,10 +13,10 @@ struct address_type
 
 namespace detail {
 inline bool 
-parse_address_type (std::regex const& regex, 
+parse_address_type (rgx::regex const& regex, 
     std::string const& s, address_type& a)
 {
-	std::smatch match;
+	rgx::smatch match;
 	if (regex_match(s, match, regex)) 
 	{
 		assert (match.size () >= 2);
@@ -36,8 +36,8 @@ validate (boost::any& v,
     std::vector<std::string> const& values,
     address_type*, int)
 {
-	static std::regex const r1 ("\\[([^\\]]*)\\]:(.*)");
-	static std::regex const r2 ("([^:]*):(.*)");
+	static rgx::regex const r1 ("\\[([^\\]]*)\\]:(.*)");
+	static rgx::regex const r2 ("([^:]*):(.*)");
 
 	using namespace boost::program_options;
 

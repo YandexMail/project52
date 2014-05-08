@@ -30,6 +30,7 @@ find_package(Boost
              coroutine
              context
              program_options 
+             regex
 REQUIRED)
 
 find_package(ZLib)

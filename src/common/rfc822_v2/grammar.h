@@ -22,7 +22,7 @@ namespace phoenix = boost::phoenix;
 
 namespace {
 BOOST_AUTO (CRLF, "\r\n");
-BOOST_AUTO (WSP, " \t");
+// BOOST_AUTO (WSP, " \t");
 }
 
 

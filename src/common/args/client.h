@@ -5,7 +5,6 @@
 #include <common/args/address.h>
 #include <common/args/sessions.h>
 #include <string>
-#include <regex>
 
 // ip address list parsing
 namespace p52 { namespace args {

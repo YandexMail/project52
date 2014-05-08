@@ -11,6 +11,7 @@ find_package(Boost
              timer 
              chrono
              thread 
+             regex
 REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")

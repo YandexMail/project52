@@ -1,9 +1,9 @@
 #ifndef _P52_ARGS_THREADS_H_
 #define _P52_ARGS_THREADS_H_
 #include <common/args/po.h>
+#include <common/args/regex.h>
 #include <common/args/number.h>
 #include <string>
-#include <regex>
 
 // ip address list parsing
 namespace p52 { namespace args {
@@ -24,13 +24,13 @@ inline void
 validate (boost::any& v, std::vector<std::string> const& values,
     affinity_args*, int)
 {
-  static std::regex const r ("(\\d+):(\\d+)");
+  static rgx::regex const r ("(\\d+):(\\d+)");
 
   using namespace boost::program_options;
   validators::check_first_occurrence(v);
   const std::string& s = validators::get_single_string(values);
 
-  std::smatch match;
+  rgx::smatch match;
   if (regex_match(s, match, r))
   {
     assert (match.size () == 3);
@@ -52,13 +52,13 @@ inline void
 validate (boost::any& v, std::vector<std::string> const& values,
     threads_args*, int)
 {
-  static std::regex const r ("(\\d+)(:(\\d+)?)?");
+  static rgx::regex const r ("(\\d+)(:(\\d+)?)?");
 
   using namespace boost::program_options;
   validators::check_first_occurrence(v);
   const std::string& s = validators::get_single_string(values);
 
-  std::smatch match;
+  rgx::smatch match;
   if (regex_match(s, match, r))
   {
     assert (match.size () == 4);

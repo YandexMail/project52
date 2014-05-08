@@ -3,7 +3,6 @@
 #include <common/args/po.h>
 #include <common/args/number.h>
 #include <string>
-#include <regex>
 
 // ip address list parsing
 namespace p52 { namespace args {

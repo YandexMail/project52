@@ -2,7 +2,6 @@
 #define _P52_ARGS_SERVER_SIMLPE_H_
 #include <common/args/po.h>
 #include <string>
-#include <regex>
 
 // ip address list parsing
 namespace p52 { namespace args {

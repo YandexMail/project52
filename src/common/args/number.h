@@ -1,10 +1,10 @@
 #ifndef _P52_ARGS_NUMBER_H_
 #define _P52_ARGS_NUMBER_H_
 #include <common/args/po.h>
+#include <common/args/regex.h>
 #include <utility> // std::move
 #include <cstddef> // std::size_t
 #include <string>
-#include <regex>
 #include <istream>
 #include <ostream>
 
@@ -45,14 +45,13 @@ validate (boost::any& v,
     std::vector<std::string> const& values,
     number<T>*, int)
 {
-	static std::regex const r ("(\\d+)([kKmMgGtTpPeEzZyY]?)");
+	static rgx::regex const r ("(\\d+)([kKmMgGtTpPeEzZyY]?)");
 
 	using namespace boost::program_options;
-
 	validators::check_first_occurrence(v);
   const std::string& s = validators::get_single_string(values);
 
-	std::smatch match;
+	rgx::smatch match;
 	if (regex_match(s, match, r)) 
 	{
 		T val = boost::lexical_cast<T> (match[1]);

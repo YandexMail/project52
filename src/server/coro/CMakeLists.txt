@@ -13,6 +13,7 @@ find_package(Boost
              thread 
              coroutine
              context
+             regex
 REQUIRED)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
