@@ -26,7 +26,7 @@ parse_args (int ac, char* av[], server_simple_args& ssa)
     .add_options ()
       ("zero-copy,Z", "Use zero copy buffers")
       ("port,p", po::value<short unsigned> ()
-        ->default_value (25), "tcp port number")
+        ->default_value (30025), "tcp port number")
   ;
 
   po::positional_options_description pos;

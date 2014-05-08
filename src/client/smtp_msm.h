@@ -72,15 +72,15 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
   {
     ev_resolved hashed;
 
-    template <class Event, class FSM>
-    void on_entry (Event const& ev, FSM& fsm) 
+    template <class FSM>
+    void on_entry (ev_resolved const& ev, FSM& fsm) 
     { 
       hashed = ev;
    		fsm.client ().do_connect (ev.endpoints);
    	}
      
-    template <class FSM>
-    void on_entry (boost::any const&, FSM& fsm) 
+    template <class Event, class FSM>
+    void on_entry (Event const&, FSM& fsm) 
     { 
    		fsm.client ().do_connect (hashed.endpoints);
    	}
@@ -318,6 +318,16 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
     }
   };
 
+  struct error_is_timeout 
+  {
+    template <class EVT,class FSM,class SourceState,class TargetState>
+    inline bool 
+    operator() (EVT const& evt, FSM const&, SourceState&, TargetState&) const
+    {
+      return (evt.error_code == boost::asio::error::timed_out);
+    }
+  };
+
   struct transition_table : mpl::vector<
     //
     Row < Resolve      , ev_resolved   , Connect                               >
@@ -325,6 +335,7 @@ struct smtp_msm_: public msm::front::state_machine_def<smtp_msm_<Client>>
 
   , Row < Connect      , ev_connected  , WaitHelo                              >
   , Row < Connect      , ev_error      , Destroy                               >
+  , Row < Connect      , ev_error      , Connect, none, error_is_timeout       >
 
   , Row < WaitHelo     , ev_ready      , Handshake                             >
   , Row < WaitHelo     , ev_error      , Destroy                               >

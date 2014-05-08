@@ -21,8 +21,8 @@ namespace ascii = boost::spirit::ascii;
 namespace phoenix = boost::phoenix;
 
 namespace {
-BOOST_AUTO (CRLF, "\r\n");
-// BOOST_AUTO (WSP, " \t");
+  auto CRLF = qi::lit ("\r\n");
+  auto WSP = qi::char_ (" \t");
 }
 
 
@@ -85,16 +85,16 @@ struct grammar: qi::grammar<Iterator>
     field_content = omit [
      // *char_ ("[0-9a-zA-Z_- \t:]") 
     *(char_ - '\r' - '\n')
-     >> -((CRLF >> +char_ ("[\t ]"))
-     >> +(char_ - '\r' - '\n') % (CRLF >> +char_ ("[\t ]")))
+     >> -((CRLF >> +WSP)
+     >> +(char_ - '\r' - '\n') % (CRLF >> +WSP))
     ];
     body = omit [* char_];
 
     field = 
          raw [field_name]  [ on.field_name ]
-      // >> *WSP
+      >> *WSP
       >> ':'
-      // >> *WSP
+      >> *WSP
       >> raw [field_content] [ on.field_content ]
     ;
 
