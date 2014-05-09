@@ -11,7 +11,7 @@ class basic_fragment : public const_base_chunk
 {
 public:
   basic_fragment ()
-    : size_ (0), data_ (0)
+    : size_ (0), data_ (0), data_end_ (0)
   {}
 
   basic_fragment (
@@ -20,37 +20,42 @@ public:
   )
     : size_ (size)
     , data_ (data)
+    , data_end_ (&data[size])
   {
   }
 
-#if 0 // move constructor
   basic_fragment (basic_fragment&& x)
     : size_ (x.size_)
     , data_ (x.data_)
+    , data_end_ (x.data_end_)
   {
     x.size_ = 0;
     x.data_ = 0;
+    x.data_end_ = 0;
   }
 
   basic_fragment& operator= (basic_fragment&& x)
   {
     size_ = x.size_;
     data_ = x.data_;
+    data_end_ = x.data_end_;
     x.size_ = 0;
     x.data_ = 0;
+    x.data_end_ = 0;
+
+    return *this;
   }
-#endif
 
   typedef const char* const_iterator;
 
   const_iterator begin () const { return data_; }
-  const_iterator   end () const { return   &data_[size_]; }
+  const_iterator   end () const { return data_end_ /*  &data_[size_] */; }
 
   std::size_t size () const
   { return size_; }
 
   bool contains(const_iterator i) const
-  { return i >= data_ && i <= &data_[size_]; }
+  { return i >= begin () && i <= end (); }
 
   std::pair<const byte_t*, std::size_t> buff()
   { return std::make_pair (data_, size_); }
@@ -58,6 +63,9 @@ public:
 protected:
   mutable std::size_t    size_;
   mutable const char*    data_;
+
+  // for the sake of optimization
+  const char* data_end_;
 
   basic_fragment (basic_fragment const&);
   void operator= (basic_fragment const&);
@@ -92,6 +100,7 @@ public:
   {
     data_ = real_data_;
     size_ = size;
+    data_end_ = &data_[size_];
   }
 
   ~basic_raii_fragment ()
@@ -100,9 +109,9 @@ public:
       alloc_.deallocate (real_data_, size_);
   }
 
-#if 0 // move constructor
-  basic_raii_fragment (basic_fragment&& x)
-    : alloc_ (x.alloc_)
+  basic_raii_fragment (basic_raii_fragment&& x)
+    : basic_fragment (std::move (static_cast<basic_fragment&&> (x)))
+    , alloc_ (std::move (x.alloc_))
     , real_data_ (x.real_data_)
   {
     x.real_data_ = 0;
@@ -113,19 +122,23 @@ public:
     if (real_data_)
       alloc_.deallocate (real_data_, size_);
 
-    alloc_ = x.alloc_;
+    this->basic_fragment::operator=(
+      std::move (static_cast<basic_fragment&&> (x)));
+
+    alloc_ = std::move (x.alloc_);
     real_data_ = x.real_data_;
     x.real_data_ = 0;
+
+    return *this;
   }
-#endif
 
   typedef char* iterator;
   const_iterator begin () const { return cbegin (); }
   const_iterator   end () const { return   cend (); }
   const_iterator cbegin () const { return data_; }
-  const_iterator   cend () const { return   &data_[size_]; }
+  const_iterator   cend () const { return   data_end_; }
   iterator begin () { return real_data_; }
-  iterator   end () { return   &real_data_[size_]; }
+  iterator   end () { return const_cast<iterator> (data_end_); }
 
 private:
   allocator_type alloc_;

@@ -44,19 +44,23 @@ public:
   iterator (fragment_list const& segm_seq, 
             fragment_iterator const& cur_seg,
             skip_iterator const& cur_val,
-            bool end_iterator = false)
+            bool /*end_iterator*/ = false)
     : fragment_list_ (&segm_seq)
     , cur_seg_ (cur_seg)
     , cur_val_ (cur_val)
-    , after_last_frag_ (frag_list ().empty () || cur_val == (*cur_seg_)->end())
-  {
+    , after_last_frag_ (
+        frag_list ().empty () || 
+        cur_val == (*cur_seg_)->end()  // operf: 138398  7.3958
+      )
+  { //  operf: 38752  2.0708
     // assert (! frag_list ().empty ());
-
+#if 0
     if (end_iterator && !frag_list ().empty ())
     {
       assert(cur_seg_ != frag_list ().end());
       after_last_frag_ = (cur_val == (*cur_seg_)->end());
     }
+#endif
   }
 
   iterator (fragment_list const& segm_seq, 
@@ -92,26 +96,17 @@ private:
 
   bool equal (iterator const& other) const
   {
-#if 1
-    // dirty but fast and hopefully working way
     if (after_last_frag_ ^ other.after_last_frag_) {
-      skip_iterator this_val = (after_last_frag_ && !is_last_fragment() ? next_val() : cur_val_);
-      skip_iterator other_val = (other.after_last_frag_  && !other.is_last_fragment() ? other.next_val() : other.cur_val_);
+      skip_iterator this_val = 
+        (after_last_frag_ && !is_last_fragment() ? next_val() : cur_val_);
+      skip_iterator other_val = 
+        (other.after_last_frag_  && !other.is_last_fragment() 
+            ? other.next_val() : other.cur_val_);
       return this_val == other_val &&
              &frag_list () == &other.frag_list ();
     }
     return cur_val_ == other.cur_val_ &&
            &frag_list () == &other.frag_list ();
-#else
-    // correct and slow
-    return
-          &frag_list () == &other.frag_list ()
-      && skip_head_ == other.skip_head_
-      && skip_tail_ == other.skip_tail_
-      && cur_seg_ == other.cur_seg_
-      && cur_val_ == other.cur_val_
-    ;
-#endif
   }
 
   void increment ()
